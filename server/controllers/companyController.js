@@ -1,4 +1,5 @@
 const Company = require('../models/Company');
+const { sanitizeSearchQuery, sanitizePagination } = require('../utils/validation');
 
 // @desc    Get all companies
 // @route   GET /api/companies
@@ -10,14 +11,17 @@ exports.getCompanies = async (req, res) => {
     const query = {};
 
     if (type) query.type = type;
-    if (search) query.$text = { $search: search };
+    if (search) {
+      const sanitizedSearch = sanitizeSearchQuery(search);
+      query.$text = { $search: sanitizedSearch };
+    }
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const pagination = sanitizePagination(page, limit);
 
     const companies = await Company.find(query)
       .sort({ activeJobs: -1, name: 1 })
-      .skip(skip)
-      .limit(parseInt(limit));
+      .skip(pagination.skip)
+      .limit(pagination.limit);
 
     const total = await Company.countDocuments(query);
 
@@ -25,8 +29,8 @@ exports.getCompanies = async (req, res) => {
       success: true,
       count: companies.length,
       total,
-      page: parseInt(page),
-      pages: Math.ceil(total / parseInt(limit)),
+      page: pagination.page,
+      pages: Math.ceil(total / pagination.limit),
       companies
     });
   } catch (error) {

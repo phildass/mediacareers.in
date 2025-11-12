@@ -1,4 +1,5 @@
 const EducationInstitution = require('../models/EducationInstitution');
+const { sanitizeSearchQuery, sanitizePagination } = require('../utils/validation');
 
 // @desc    Get all education institutions
 // @route   GET /api/education
@@ -10,16 +11,25 @@ exports.getInstitutions = async (req, res) => {
     const query = {};
 
     if (type) query.type = type;
-    if (city) query['location.city'] = new RegExp(city, 'i');
-    if (state) query['location.state'] = new RegExp(state, 'i');
-    if (search) query.$text = { $search: search };
+    if (city) {
+      const sanitizedCity = sanitizeSearchQuery(city);
+      query['location.city'] = new RegExp(sanitizedCity, 'i');
+    }
+    if (state) {
+      const sanitizedState = sanitizeSearchQuery(state);
+      query['location.state'] = new RegExp(sanitizedState, 'i');
+    }
+    if (search) {
+      const sanitizedSearch = sanitizeSearchQuery(search);
+      query.$text = { $search: sanitizedSearch };
+    }
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const pagination = sanitizePagination(page, limit);
 
     const institutions = await EducationInstitution.find(query)
       .sort({ name: 1 })
-      .skip(skip)
-      .limit(parseInt(limit));
+      .skip(pagination.skip)
+      .limit(pagination.limit);
 
     const total = await EducationInstitution.countDocuments(query);
 
@@ -27,8 +37,8 @@ exports.getInstitutions = async (req, res) => {
       success: true,
       count: institutions.length,
       total,
-      page: parseInt(page),
-      pages: Math.ceil(total / parseInt(limit)),
+      page: pagination.page,
+      pages: Math.ceil(total / pagination.limit),
       institutions
     });
   } catch (error) {

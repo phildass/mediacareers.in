@@ -5,6 +5,7 @@ const User = require('../models/User');
 const Job = require('../models/Job');
 const { parseResume, generateTailoredResume, generateCoverLetter } = require('../utils/aiService');
 const { sendApplicationConfirmation } = require('../utils/emailService');
+const { sanitizeFilePath } = require('../utils/validation');
 
 // Configure multer for file upload
 const storage = multer.diskStorage({
@@ -59,6 +60,14 @@ exports.uploadResume = async (req, res) => {
       }
 
       // Parse resume with AI
+      // Validate file path to prevent path injection
+      if (!req.file.path || req.file.path.includes('..')) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid file path'
+        });
+      }
+      
       const fileBuffer = fs.readFileSync(req.file.path);
       const parseResult = await parseResume(fileBuffer);
 

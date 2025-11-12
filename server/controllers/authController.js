@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { sendWelcomeEmail } = require('../utils/emailService');
+const { sanitizeEmail, sanitizeString, validateRequiredFields } = require('../utils/validation');
 
 // Generate JWT token
 const generateToken = (id) => {
@@ -16,8 +17,29 @@ exports.register = async (req, res) => {
   try {
     const { email, password, name, phone } = req.body;
 
+    // Validate required fields
+    const validation = validateRequiredFields(req.body, ['email', 'password', 'name']);
+    if (!validation.valid) {
+      return res.status(400).json({
+        success: false,
+        message: validation.message
+      });
+    }
+
+    // Sanitize inputs
+    const sanitizedEmail = sanitizeEmail(email);
+    if (!sanitizedEmail) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid email format'
+      });
+    }
+
+    const sanitizedName = sanitizeString(name, 100);
+    const sanitizedPhone = phone ? sanitizeString(phone, 20) : undefined;
+
     // Check if user already exists
-    const userExists = await User.findOne({ email });
+    const userExists = await User.findOne({ email: sanitizedEmail });
     if (userExists) {
       return res.status(400).json({
         success: false,
@@ -27,14 +49,14 @@ exports.register = async (req, res) => {
 
     // Create user
     const user = await User.create({
-      email,
+      email: sanitizedEmail,
       password,
-      name,
-      phone
+      name: sanitizedName,
+      phone: sanitizedPhone
     });
 
     // Send welcome email
-    await sendWelcomeEmail(email, name);
+    await sendWelcomeEmail(sanitizedEmail, sanitizedName);
 
     // Generate token
     const token = generateToken(user._id);
@@ -72,8 +94,17 @@ exports.login = async (req, res) => {
       });
     }
 
+    // Sanitize email
+    const sanitizedEmail = sanitizeEmail(email);
+    if (!sanitizedEmail) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid email format'
+      });
+    }
+
     // Check for user (include password field)
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne({ email: sanitizedEmail }).select('+password');
 
     if (!user) {
       return res.status(401).json({
@@ -148,6 +179,14 @@ exports.updateProfile = async (req, res) => {
     delete updates.email;
     delete updates.password;
     delete updates.membership;
+
+    // Sanitize string fields if present
+    if (updates.name) {
+      updates.name = sanitizeString(updates.name, 100);
+    }
+    if (updates.phone) {
+      updates.phone = sanitizeString(updates.phone, 20);
+    }
 
     const user = await User.findByIdAndUpdate(
       req.user.id,

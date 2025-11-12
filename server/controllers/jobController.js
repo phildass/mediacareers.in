@@ -2,6 +2,7 @@ const Job = require('../models/Job');
 const Company = require('../models/Company');
 const User = require('../models/User');
 const { matchJobs, assessJobFit } = require('../utils/aiService');
+const { sanitizeSearchQuery, sanitizePagination } = require('../utils/validation');
 
 // @desc    Get all jobs
 // @route   GET /api/jobs
@@ -23,21 +24,27 @@ exports.getJobs = async (req, res) => {
     // Apply filters
     if (category) query.category = category;
     if (type) query.type = type;
-    if (location) query['location.city'] = new RegExp(location, 'i');
+    if (location) {
+      // Sanitize location to prevent regex injection
+      const sanitizedLocation = sanitizeSearchQuery(location);
+      query['location.city'] = new RegExp(sanitizedLocation, 'i');
+    }
     if (experience) {
       query['experience.min'] = { $lte: parseInt(experience) };
     }
     if (search) {
-      query.$text = { $search: search };
+      // Sanitize search query
+      const sanitizedSearch = sanitizeSearchQuery(search);
+      query.$text = { $search: sanitizedSearch };
     }
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const pagination = sanitizePagination(page, limit);
 
     const jobs = await Job.find(query)
       .populate('company', 'name type logo website')
       .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit));
+      .skip(pagination.skip)
+      .limit(pagination.limit);
 
     const total = await Job.countDocuments(query);
 
@@ -45,8 +52,8 @@ exports.getJobs = async (req, res) => {
       success: true,
       count: jobs.length,
       total,
-      page: parseInt(page),
-      pages: Math.ceil(total / parseInt(limit)),
+      page: pagination.page,
+      pages: Math.ceil(total / pagination.limit),
       jobs
     });
   } catch (error) {
