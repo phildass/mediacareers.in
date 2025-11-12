@@ -1,91 +1,64 @@
 # MediaCareers.in
 
-**India's First AI-Driven Job Platform for Media Professionals**
+MediaCareers.in is an AI-driven job platform focused on careers in the media and aligned industries across India. It connects journalists, editors, sub-editors, copy editors, social media managers, PR and corporate communications professionals, content creators and other media specialists with curated job opportunities and employer profiles.
 
-A specialized web application that connects journalists, editors, PR specialists, corporate communicators, content creators, and other media professionals with the best job opportunities across India.
+## About
+This project aggregates listings (manual + scraped), offers AI-assisted resume and cover-letter help, and provides a simple membership model:
+- Premium membership: Rs 199 for 3 months (placeholder UPI QR/flow for now).
+- Juniors/freshers: free membership eligibility determined by experience extracted from uploaded or entered resumes.
+- Unlimited applications for premium members while membership is active.
 
-## 🎯 About
+Note: During development and testing, applications and emails are routed to a test address (info@phildass.com) or suppressed depending on TEST_MODE. Do not disable TEST_MODE until you have verified email/payment configurations.
 
-In a fast-paced sector like media and communications, finding the right job requires more than a generic search engine—it demands specialization, intelligence, and speed. MediaCareers.in is designed to meet this exact need, serving as the first dedicated, AI-driven job platform for media professionals across India.
-
-## ✨ Features
-
-- **AI-Powered Job Matching**: Intelligent algorithms that learn your preferences and suggest relevant opportunities
-- **Specialized Categories**: 
+## Features
+- AI-powered job matching and job recommendations
+- Resume upload (file or pasted text) and basic resume parsing
+- AI assistance for writing and tailoring resumes and cover letters
+- Job search and listing pages with media-specific categories:
   - Journalism & Reporting
   - Editing & Copy Editing
-  - PR & Communications
-  - Corporate Communications
-  - Content Creation
+  - PR & Corporate Communications
   - Social Media Management
-- **Lightning Fast Search**: Advanced search technology delivers results in milliseconds
-- **Company Profiles**: Explore top media companies actively hiring
-- **Mobile Responsive**: Optimized experience across all devices
+  - Content Creation and more
+- Employer/company profiles and a directory of media/education institutions
+- Free employer job-posting form and admin-curated listings
+- Scraper skeleton (must respect robots.txt and site ToS; rate-limited)
+- Admin area (hidden link: /admin) protected via environment-configured credentials
+- Privacy policy placeholder included in repository
 
-## 🚀 Getting Started
+## Getting started (development)
+1. Copy `.env.example` to `.env` and update values (do NOT commit `.env`).
+2. Install dependencies:
+   - Server: `cd server && npm install`
+   - Client: `cd client && npm install`
+3. Start development servers:
+   - Server: `cd server && npm run dev` (or as documented)
+   - Client: `cd client && npm start`
+4. Keep `TEST_MODE=true` while testing so that emails and application deliveries are suppressed or sent to the test address.
 
-### Prerequisites
+## Important configuration
+- TEST_MODE: when true, the app should not send real emails or applications to scraped employer addresses.
+- ADMIN_USER / ADMIN_PASS: admin credentials must live in environment variables and never be committed.
+- EMAIL_*: SMTP credentials used only when TEST_MODE=false.
 
-- Node.js 18.x or higher
-- npm or yarn
+## Payment
+- UPI QR is used as a placeholder in the UI. Implement a secure payment provider and verification flow before enabling real payments and toggling TEST_MODE off.
 
-### Installation
+## Privacy & Compliance
+- privacy-policy.md is included as a starter. Update it with legal counsel before launch and ensure scraping follows site terms and data-protection guidance.
+- Do not store or share credentials, sensitive personal data, or payment details without proper security and encryption.
 
-```bash
-# Install dependencies
-npm install
+## Contributing & Workflow
+- Work in feature branches; open focused PRs (small, testable changes).
+- Keep secrets out of the repo; add environment variables to `.env` only.
+- Add unit tests for critical business logic (resume parsing, application sending).
+- Resolve merge conflicts by producing valid JSON or unioned lists (e.g., `.gitignore`) — avoid blindly accepting both sides in editors for JSON files.
 
-# Run development server
-npm run dev
+## Quick checklist before production
+- Replace TEST_MODE with verified email and payment integrations.
+- Harden authentication and admin access (replace basic auth with proper user management).
+- Verify scrapers respect robots.txt and rate limits.
+- Security audit for secrets, dependency vulnerabilities, and input validation.
 
-# Build for production
-npm run build
-
-# Start production server
-npm start
-```
-
-Open [http://localhost:3000](http://localhost:3000) to view the application.
-
-## 🛠️ Tech Stack
-
-- **Framework**: Next.js 16
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **Icons**: Lucide React
-- **Deployment**: Vercel/GitHub Pages
-
-## 📁 Project Structure
-
-```
-mediacareers.in/
-├── app/
-│   ├── about/         # About page
-│   ├── companies/     # Companies listing
-│   ├── jobs/          # Job listings
-│   ├── layout.tsx     # Root layout
-│   ├── page.tsx       # Home page
-│   └── globals.css    # Global styles
-├── components/        # Reusable components
-├── public/           # Static assets
-└── ...config files
-```
-
-## 🎨 Design Philosophy
-
-- **Specialized**: Focus exclusively on media and communications roles
-- **Intelligent**: AI-driven recommendations and matching
-- **Fast**: Optimized performance for instant results
-- **User-Centric**: Clean, intuitive interface designed for job seekers
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
----
-
-Built with ❤️ for India's media professionals
+## License
+MIT — see LICENSE file.
