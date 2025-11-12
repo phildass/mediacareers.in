@@ -1,0 +1,130 @@
+name: Backend CI/CD
+
+on:
+  push:
+    branches: [ main, develop, 'copilot/**' ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  security-check:
+    name: Security Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Run security check script
+      run: |
+        chmod +x ./scripts/security-check.sh
+        ./scripts/security-check.sh
+
+  test-backend:
+    name: Backend Tests & Linting
+    runs-on: ubuntu-latest
+    needs: security-check
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: backend
+      run: npm ci
+    
+    - name: Run ESLint
+      working-directory: backend
+      run: npm run lint
+    
+    - name: Run tests
+      working-directory: backend
+      run: npm test
+      env:
+        NODE_ENV: test
+        TEST_MODE: true
+        JWT_SECRET: test-secret-key-for-ci
+        MONGODB_URI: mongodb://localhost:27017/mediacareers-test
+    
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      if: matrix.node-version == '20.x'
+      with:
+        directory: ./backend/coverage
+        flags: backend
+        fail_ci_if_error: false
+
+  codeql-analysis:
+    name: CodeQL Security Scan
+    runs-on: ubuntu-latest
+    needs: test-backend
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v2
+      with:
+        languages: javascript
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
+
+  test-mode-validation:
+    name: Validate TEST_MODE
+    runs-on: ubuntu-latest
+    needs: security-check
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Verify TEST_MODE default is true
+      run: |
+        if ! grep -q "TEST_MODE=true" backend/.env.example; then
+          echo "ERROR: TEST_MODE is not set to true in .env.example"
+          exit 1
+        fi
+        echo "✓ TEST_MODE is properly set to true in .env.example"
+    
+    - name: Check email service uses TEST_MODE
+      run: |
+        if ! grep -q "config.testMode" backend/src/utils/emailService.js; then
+          echo "ERROR: Email service doesn't check TEST_MODE"
+          exit 1
+        fi
+        echo "✓ Email service properly checks TEST_MODE"
+
+  build-status:
+    name: Build Status
+    runs-on: ubuntu-latest
+    needs: [security-check, test-backend, codeql-analysis, test-mode-validation]
+    if: always()
+    
+    steps:
+    - name: Check build status
+      run: |
+        if [ "${{ needs.security-check.result }}" != "success" ] || \
+           [ "${{ needs.test-backend.result }}" != "success" ] || \
+           [ "${{ needs.codeql-analysis.result }}" != "success" ] || \
+           [ "${{ needs.test-mode-validation.result }}" != "success" ]; then
+          echo "❌ Build failed!"
+          exit 1
+        fi
+        echo "✅ All checks passed!"
