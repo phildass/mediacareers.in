@@ -10,8 +10,9 @@ exports.sanitizeEmail = (email) => {
   // Convert to lowercase and trim
   const sanitized = email.toLowerCase().trim();
   
-  // Validate email format
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  // Validate email format - using a simple but safe regex
+  // This regex is not vulnerable to ReDoS attacks
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
   if (!emailRegex.test(sanitized)) {
     return null;
   }
