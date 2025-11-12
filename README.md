@@ -54,6 +54,33 @@ Note: During development and testing, applications and emails are routed to a te
 - Add unit tests for critical business logic (resume parsing, application sending).
 - Resolve merge conflicts by producing valid JSON or unioned lists (e.g., `.gitignore`) — avoid blindly accepting both sides in editors for JSON files.
 
+## Deployment
+
+MediaCareers.in uses a split deployment architecture:
+- **Client (Frontend)**: Deploy to Vercel using Next.js static export
+- **Backend (API)**: Deploy separately to Render, Railway, or a VPS
+
+### Quick Start
+1. **Deploy Client to Vercel**: Connect your GitHub repository to Vercel and it will auto-deploy the Next.js app
+2. **Deploy Backend to Render**: Create a new Web Service on Render pointing to the `backend/` directory
+3. **Configure MongoDB**: Use MongoDB Atlas for the production database
+4. **Set Environment Variables**: Configure all required environment variables in Vercel (for frontend) and Render/VPS (for backend)
+
+### Detailed Guide
+See [docs/deploy-vercel.md](docs/deploy-vercel.md) for comprehensive step-by-step instructions including:
+- Vercel deployment and custom domain setup for mediacareers.in
+- Backend deployment options (Render vs VPS)
+- MongoDB Atlas configuration
+- Environment variable reference
+- Security checklist
+- Troubleshooting common issues
+
+### Important Notes
+- Keep `TEST_MODE=true` in backend until email and payment are fully verified
+- Never commit secrets or credentials to the repository
+- Use Vercel and Render environment variable UIs to manage sensitive configuration
+- The backend should be deployed separately from the frontend
+
 ## Quick checklist before production
 - Replace TEST_MODE with verified email and payment integrations.
 - Harden authentication and admin access (replace basic auth with proper user management).
