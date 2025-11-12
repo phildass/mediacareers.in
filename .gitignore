@@ -1,3 +1,13 @@
+node_modules/
+.env
+.env.local
+dist/
+build/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
 # Dependencies
 node_modules/
 npm-debug.log*
@@ -22,6 +32,10 @@ coverage/
 .idea/
 *.swp
 *.swo
+coverage/
+.nyc_output/
+uploads/
+temp/
 *~
 
 # OS
