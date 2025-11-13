@@ -1,3 +1,4 @@
+﻿$pkg = @'
 {
   "name": "mediacareers-backend",
   "version": "0.1.0",
@@ -9,7 +10,12 @@
     "lint": "eslint src --ext .js,.ts",
     "lint:fix": "eslint src --fix"
   },
-  "keywords": ["media","jobs","careers","india"],
+  "keywords": [
+    "media",
+    "jobs",
+    "careers",
+    "india"
+  ],
   "license": "MIT",
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -26,7 +32,12 @@
   "devDependencies": {
     "eslint": "^9.39.1",
     "jest": "^30.2.0",
+    "mongodb-memory-server": "^10.3.0",
     "nodemon": "^3.0.2",
     "supertest": "^7.1.4"
   }
 }
+'@
+
+# write file without BOM (UTF-8)
+[System.IO.File]::WriteAllText('.\package.json', $pkg, (New-Object System.Text.UTF8Encoding $false))
