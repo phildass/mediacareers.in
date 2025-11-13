@@ -29,7 +29,7 @@
     "nodemailer": "^6.9.7"
   },
   "devDependencies": {
-    "jest": "^29.7.0",
+    "jest": "^30.2.0",
     "supertest": "^6.3.3",
     "nodemon": "^3.0.2",
     "eslint": "^8.56.0",
