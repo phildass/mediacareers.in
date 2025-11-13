@@ -11,6 +11,7 @@ node_modules/
 dist/
 build/
 .next/
+out/
 
 # logs
 npm-debug.log*
@@ -41,6 +42,6 @@ next-env.d.ts
 uploads/
 
 # lockfiles
-package-lock.json
+# package-lock.json should be committed for production
 yarn.lock
 pnpm-lock.yaml
