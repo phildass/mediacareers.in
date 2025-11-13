@@ -1,33 +1,20 @@
-require('dotenv').config();
+// (suggested) robust test-mode detection
+// ensure this file path matches your project (adjust path if needed)
 
-module.exports = {
-  env: process.env.NODE_ENV || 'development',
-  port: process.env.PORT || 3000,
-  host: process.env.HOST || 'localhost',
-  
-  database: {
-    uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/mediacareers'
-  },
-  
-  jwt: {
-    secret: process.env.JWT_SECRET || 'default-secret-key-change-in-production',
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d'
-  },
-  
-  email: {
-    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.EMAIL_PORT) || 587,
-    secure: process.env.EMAIL_SECURE === 'true',
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASSWORD
-    },
-    from: process.env.EMAIL_FROM || 'noreply@mediacareers.in'
-  },
-  
-  testMode: process.env.TEST_MODE === 'true',
-  
-  cors: {
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3001'
-  }
+const env = process.env;
+
+function parseBool(value) {
+  if (value === undefined || value === null) return false;
+  const s = String(value).toLowerCase().trim();
+  return s === '1' || s === 'true' || s === 'yes' || s === 'on';
+}
+
+const config = {
+  // other config entries...
+  testMode: parseBool(env.TEST_MODE) || env.NODE_ENV === 'test',
+  // e.g.:
+  // port: Number(env.PORT) || 3000,
+  // ...
 };
+
+module.exports = config;
