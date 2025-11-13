@@ -27,7 +27,7 @@
     "autoprefixer": "^10.4.20",
     "concurrently": "^8.0.0",
     "eslint": "^8.57.1",
-    "eslint-config-next": "^16.0.1",
+    "eslint-config-next": "^16.0.2",
     "postcss": "^8",
     "tailwindcss": "^4.0.0",
     "typescript": "^5"
