@@ -9,7 +9,7 @@
     "server": "node server/index.js",
     "client": "next dev",
     "dev:full": "concurrently \"npm:server\" \"npm:client\"",
-    "lint": "next lint",
+    "lint": "eslint .",
     "export": "next build",
     "test": "echo \"No tests configured\" && exit 0"
   },
