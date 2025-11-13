@@ -45,6 +45,9 @@ next-env.d.ts
 uploads/
 
 # lockfiles
+<<<<<<< HEAD
+=======
 # package-lock.json should be committed for production
+>>>>>>> origin/main
 yarn.lock
 pnpm-lock.yaml
