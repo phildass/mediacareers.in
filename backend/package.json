@@ -1,44 +1,38 @@
 {
   "name": "mediacareers-backend",
-  "version": "1.0.0",
-  "description": "Backend API for MediaCareers.in - A webapp for media and allied jobs across India",
-  "main": "src/server.js",
+  "version": "0.1.0",
+  "private": true,
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
-    "test": "jest --coverage",
-    "test:watch": "jest --watch",
-    "test:unit": "jest tests/unit",
-    "test:integration": "jest tests/integration",
-    "lint": "eslint src tests",
-    "lint:fix": "eslint src tests --fix"
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "jest --runInBand",
+    "lint": "eslint src --ext .js,.ts",
+    "lint:fix": "eslint src --fix"
   },
-  "keywords": ["media", "jobs", "careers", "india"],
-  "author": "",
+  "keywords": [
+    "media",
+    "jobs",
+    "careers",
+    "india"
+  ],
   "license": "MIT",
   "dependencies": {
-    "express": "^5.1.0",
-    "dotenv": "^17.2.3",
     "bcryptjs": "^3.0.3",
-    "jsonwebtoken": "^9.0.2",
-    "joi": "^18.0.1",
-    "mongoose": "^8.0.3",
     "cors": "^2.8.5",
-    "helmet": "^8.1.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
     "express-rate-limit": "^7.1.5",
-    "nodemailer": "^7.0.10"
+    "helmet": "^8.1.0",
+    "joi": "^17.11.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.0.3",
+    "nodemailer": "^6.9.7"
   },
   "devDependencies": {
-    "jest": "^30.2.0",
-    "supertest": "^7.1.4",
-    "nodemon": "^3.0.2",
     "eslint": "^9.39.1",
-    "mongodb-memory-server": "^10.3.0"
-  },
-  "jest": {
-    "testEnvironment": "node",
-    "coveragePathIgnorePatterns": ["/node_modules/"],
-    "testMatch": ["**/tests/**/*.test.js"],
-    "setupFilesAfterEnv": ["<rootDir>/tests/setup.js"]
+    "jest": "^30.2.0",
+    "mongodb-memory-server": "^10.3.0",
+    "nodemon": "^3.0.2",
+    "supertest": "^7.1.4"
   }
 }
