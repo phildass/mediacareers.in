@@ -9,7 +9,7 @@
     "server": "node server/index.js",
     "client": "next dev",
     "dev:full": "concurrently \"npm:server\" \"npm:client\"",
-    "lint": "next lint",
+    "lint": "eslint .",
     "export": "next build",
     "test": "echo \"No tests configured\" && exit 0"
   },
@@ -26,7 +26,7 @@
     "@tailwindcss/postcss": "^4.0.0",
     "autoprefixer": "^10.4.20",
     "concurrently": "^8.0.0",
-    "eslint": "^8.57.1",
+    "eslint": "^9.0.0",
     "eslint-config-next": "^16.0.1",
     "postcss": "^8",
     "tailwindcss": "^4.0.0",
