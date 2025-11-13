@@ -324,9 +324,32 @@ git checkout -b feature/your-feature-name
 
 ### 3. Run Tests
 ```bash
+# Backend tests (runs in TEST_MODE automatically)
 cd backend
 npm test
 npm run lint
+
+# Client build (CI-style)
+cd ..
+TEST_MODE=true NEXT_PUBLIC_API_URL=http://localhost:3000 npm run build
+npm run lint
+```
+
+### Important: CI and TEST_MODE
+The project uses `TEST_MODE=true` in all CI workflows to ensure:
+- No real database credentials needed for builds/tests
+- Email service logs instead of sending real emails
+- Tests run with mock data and in-memory databases
+- Builds complete without external service dependencies
+
+To run tests locally as CI does:
+```bash
+# Backend (with TEST_MODE)
+cd backend
+TEST_MODE=true NODE_ENV=test npm test
+
+# Client (with TEST_MODE)
+TEST_MODE=true NEXT_PUBLIC_API_URL=http://localhost:3000 npm run build
 ```
 
 ### 4. Run Security Checks
@@ -436,12 +459,31 @@ Before submitting a PR, ensure:
 - [ ] Tests written and passing (30/30 or more)
 - [ ] Linting passes (`npm run lint`)
 - [ ] Security check passes (`./scripts/security-check.sh`)
+- [ ] CI passes locally (run with TEST_MODE=true as CI does)
 - [ ] Documentation updated (README, comments)
 - [ ] Environment variables documented in `.env.example`
 - [ ] No secrets committed
 - [ ] TEST_MODE=true for development features
 - [ ] Code follows project style guidelines
 - [ ] Changes are minimal and focused
+
+### Running CI Checks Locally
+
+Before pushing, run the same checks CI will run:
+
+```bash
+# Security checks
+./scripts/security-check.sh
+
+# Backend tests (as CI runs them)
+cd backend
+TEST_MODE=true NODE_ENV=test npm test
+npm run lint
+
+# Client build (as CI runs it)
+cd ..
+TEST_MODE=true NEXT_PUBLIC_API_URL=http://localhost:3000 npm run build
+```
 
 ## PR Review Focus
 

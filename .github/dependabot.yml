@@ -1,0 +1,74 @@
+version: 2
+updates:
+  # Client dependencies (root package.json)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "phildass"
+    labels:
+      - "dependencies"
+      - "client"
+    commit-message:
+      prefix: "deps(client)"
+      include: "scope"
+    # Group minor and patch updates together
+    groups:
+      development-dependencies:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+      production-dependencies:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+  
+  # Backend dependencies
+  - package-ecosystem: "npm"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "phildass"
+    labels:
+      - "dependencies"
+      - "backend"
+    commit-message:
+      prefix: "deps(backend)"
+      include: "scope"
+    # Group minor and patch updates together
+    groups:
+      development-dependencies:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+      production-dependencies:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+  
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "phildass"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
