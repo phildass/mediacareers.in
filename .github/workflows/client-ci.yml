@@ -27,6 +27,8 @@ jobs:
   lint-and-build:
     name: Lint and Build Client
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     
     # Simplified to single Node version for easier debugging
     # Will re-add matrix once all tests pass consistently
@@ -119,6 +121,8 @@ jobs:
   security-check:
     name: Security Audit
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     
     steps:
     - name: Checkout code
@@ -152,6 +156,8 @@ jobs:
   type-check:
     name: TypeScript Type Check
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     
     steps:
     - name: Checkout code
@@ -182,6 +188,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [lint-and-build, security-check, type-check]
     if: always()
+    permissions:
+      contents: read
     
     steps:
     - name: Check build status
