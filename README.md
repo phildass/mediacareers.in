@@ -29,17 +29,53 @@ Note: During development and testing, applications and emails are routed to a te
 ## Getting started (development)
 1. Copy `.env.example` to `.env` and update values (do NOT commit `.env`).
 2. Install dependencies:
-   - Server: `cd server && npm install`
-   - Client: `cd client && npm install`
+   - Root (client): `npm install --legacy-peer-deps`
+   - Backend: `cd backend && npm install`
 3. Start development servers:
-   - Server: `cd server && npm run dev` (or as documented)
-   - Client: `cd client && npm start`
+   - Client: `npm run dev` (Next.js dev server on port 3000)
+   - Backend: `cd backend && npm run dev` (API server on port 3000)
+   - Both: `npm run dev:full` (runs both servers concurrently)
 4. Keep `TEST_MODE=true` while testing so that emails and application deliveries are suppressed or sent to the test address.
 
+## Running CI locally
+
+To test your changes locally before pushing (simulating CI):
+
+### Client Build
+```bash
+# Build without requiring production secrets
+TEST_MODE=true NEXT_PUBLIC_API_URL=http://localhost:3000 npm run build
+
+# Verify the build output
+ls -la out/
+
+# Run linting
+npm run lint
+```
+
+### Backend Tests
+```bash
+cd backend
+
+# Run tests in TEST_MODE (no real DB/email needed)
+TEST_MODE=true NODE_ENV=test npm test
+
+# Run linting
+npm run lint
+```
+
+### Important: CI uses TEST_MODE=true by default
+- All CI workflows automatically set `TEST_MODE=true`
+- Builds and tests run without requiring real database credentials
+- Email service logs messages instead of sending them
+- This ensures CI can run independently without production secrets
+
 ## Important configuration
-- TEST_MODE: when true, the app should not send real emails or applications to scraped employer addresses.
-- ADMIN_USER / ADMIN_PASS: admin credentials must live in environment variables and never be committed.
-- EMAIL_*: SMTP credentials used only when TEST_MODE=false.
+- **TEST_MODE**: when true, the app should not send real emails or applications to scraped employer addresses. Email service will log messages to console instead.
+- **ADMIN_USER / ADMIN_PASS**: admin credentials must live in environment variables and never be committed.
+- **EMAIL_***: SMTP credentials used only when TEST_MODE=false.
+- **MONGODB_URI**: MongoDB connection string. In TEST_MODE or tests, uses in-memory database or local test DB.
+- **JWT_SECRET**: Secret key for JWT tokens. Use a strong random string in production.
 
 ## Payment
 - UPI QR is used as a placeholder in the UI. Implement a secure payment provider and verification flow before enabling real payments and toggling TEST_MODE off.
