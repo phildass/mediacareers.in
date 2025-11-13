@@ -41,6 +41,5 @@ next-env.d.ts
 uploads/
 
 # lockfiles
-package-lock.json
 yarn.lock
 pnpm-lock.yaml
