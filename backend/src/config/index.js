@@ -1,6 +1,3 @@
-// (suggested) robust test-mode detection
-// ensure this file path matches your project (adjust path if needed)
-
 const env = process.env;
 
 function parseBool(value) {
@@ -10,11 +7,37 @@ function parseBool(value) {
 }
 
 const config = {
-  // other config entries...
+  // Test mode configuration
   testMode: parseBool(env.TEST_MODE) || env.NODE_ENV === 'test',
-  // e.g.:
-  // port: Number(env.PORT) || 3000,
-  // ...
+  
+  // Server configuration
+  port: Number(env.PORT) || 3000,
+  host: env.HOST || 'localhost',
+  nodeEnv: env.NODE_ENV || 'development',
+  
+  // Database configuration
+  mongodbUri: env.MONGODB_URI || 'mongodb://localhost:27017/mediacareers',
+  
+  // JWT configuration
+  jwtSecret: env.JWT_SECRET || 'development-secret-change-in-production',
+  jwtExpiresIn: env.JWT_EXPIRES_IN || '7d',
+  
+  // Email configuration
+  email: {
+    host: env.EMAIL_HOST || 'smtp.gmail.com',
+    port: Number(env.EMAIL_PORT) || 587,
+    secure: parseBool(env.EMAIL_SECURE),
+    from: env.EMAIL_FROM || 'noreply@mediacareers.in',
+    auth: {
+      user: env.EMAIL_USER || '',
+      pass: env.EMAIL_PASSWORD || ''
+    }
+  },
+  
+  // CORS configuration
+  cors: {
+    origin: env.CORS_ORIGIN || 'http://localhost:3001'
+  }
 };
 
 module.exports = config;
