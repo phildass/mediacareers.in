@@ -2,9 +2,9 @@ name: Backend CI/CD
 
 on:
   push:
-    branches: [ main, develop, 'copilot/**', 'deploy/*' ]
+    branches: [main, develop, 'copilot/**', 'deploy/*']
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 jobs:
   security-check:
@@ -12,25 +12,25 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v5
 
-    - name: Run security check script
-      run: |
-        chmod +x ./scripts/security-check.sh
-        ./scripts/security-check.sh
-    
-    - name: Upload security logs on failure
-      if: failure()
-      uses: actions/upload-artifact@v5
-      with:
-        name: security-check-logs
-        path: |
-          .git/
-        retention-days: 5
-        if-no-files-found: ignore
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Run security check script
+        run: |
+          chmod +x ./scripts/security-check.sh
+          ./scripts/security-check.sh
+
+      - name: Upload security logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: security-check-logs
+          path: |
+            .git/
+          retention-days: 5
+          if-no-files-found: ignore
 
   test-backend:
     name: Backend Tests & Linting
@@ -38,71 +38,71 @@ jobs:
     needs: security-check
     permissions:
       contents: read
-    
+
     # Simplified to single Node version for easier debugging
     # Will re-add matrix once all tests pass consistently
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v5
-    
-    - name: Setup Node.js 18.x
-      uses: actions/setup-node@v6
-      with:
-        node-version: '18.x'
-        cache: 'npm'
-        cache-dependency-path: backend/package-lock.json
-    
-    - name: Install dependencies
-      working-directory: backend
-      run: npm install
-    
-    - name: Run ESLint
-      working-directory: backend
-      run: npm run lint || echo "Lint failed but continuing..."
-      continue-on-error: true
-    
-    - name: Run tests with TEST_MODE
-      working-directory: backend
-      run: npm test
-      env:
-        # TEST_MODE ensures tests don't require real DB/email services
-        NODE_ENV: test
-        TEST_MODE: true
-        JWT_SECRET: test-secret-key-for-ci-do-not-use-in-production
-        MONGODB_URI: mongodb://127.0.0.1:27017/mediacareers-test
-    
-    - name: Print test logs on failure
-      if: failure()
-      working-directory: backend
-      run: |
-        echo "=== Test failed! Debug information ==="
-        echo "Node version: $(node --version)"
-        echo "NPM version: $(npm --version)"
-        echo "Current directory: $(pwd)"
-        echo "Environment variables:"
-        echo "NODE_ENV=$NODE_ENV"
-        echo "TEST_MODE=$TEST_MODE"
-        ls -la
-    
-    - name: Upload test logs on failure
-      if: failure()
-      uses: actions/upload-artifact@v5
-      with:
-        name: backend-test-failure-logs
-        path: |
-          backend/coverage/
-          backend/npm-debug.log*
-        retention-days: 5
-        if-no-files-found: ignore
-    
-    - name: Upload coverage reports
-      uses: codecov/codecov-action@v5
-      if: success()
-      with:
-        directory: ./backend/coverage
-        flags: backend
-        fail_ci_if_error: false
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js 18.x
+        uses: actions/setup-node@v6
+        with:
+          node-version: '18.x'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: backend
+        run: npm install
+
+      - name: Run ESLint
+        working-directory: backend
+        run: npm run lint || echo "Lint failed but continuing..."
+        continue-on-error: true
+
+      - name: Run tests with TEST_MODE
+        working-directory: backend
+        run: npm test
+        env:
+          # TEST_MODE ensures tests don't require real DB/email services
+          NODE_ENV: test
+          TEST_MODE: true
+          JWT_SECRET: test-secret-key-for-ci-do-not-use-in-production
+          MONGODB_URI: mongodb://127.0.0.1:27017/mediacareers-test
+
+      - name: Print test logs on failure
+        if: failure()
+        working-directory: backend
+        run: |
+          echo "=== Test failed! Debug information ==="
+          echo "Node version: $(node --version)"
+          echo "NPM version: $(npm --version)"
+          echo "Current directory: $(pwd)"
+          echo "Environment variables:"
+          echo "NODE_ENV=$NODE_ENV"
+          echo "TEST_MODE=$TEST_MODE"
+          ls -la
+
+      - name: Upload test logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: backend-test-failure-logs
+          path: |
+            backend/coverage/
+            backend/npm-debug.log*
+          retention-days: 5
+          if-no-files-found: ignore
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v5
+        if: success()
+        with:
+          directory: ./backend/coverage
+          flags: backend
+          fail_ci_if_error: false
 
   codeql-analysis:
     name: CodeQL Security Scan
@@ -114,16 +114,16 @@ jobs:
       security-events: write
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v5
+      - name: Checkout code
+        uses: actions/checkout@v5
 
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v4
-      with:
-        languages: javascript
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: javascript
 
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v4
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
 
   test-mode-validation:
     name: Validate TEST_MODE Configuration
@@ -131,40 +131,44 @@ jobs:
     needs: security-check
     permissions:
       contents: read
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v5
-    
-    - name: Verify TEST_MODE default is true in backend
-      run: |
-        echo "=== Checking backend .env.example ==="
-        if ! grep -q "TEST_MODE=true" backend/.env.example; then
-          echo "✗ ERROR: TEST_MODE is not set to true in backend/.env.example"
-          exit 1
-        fi
-        echo "✓ TEST_MODE is properly set to true in backend/.env.example"
-    
-    - name: Check email service uses TEST_MODE
-      run: |
-        echo "=== Checking email service implementation ==="
-        if ! grep -q "config.testMode" backend/src/utils/emailService.js; then
-          echo "✗ ERROR: Email service doesn't check TEST_MODE"
-          exit 1
-        fi
-        echo "✓ Email service properly checks TEST_MODE"
-    
-    - name: Verify no hardcoded production credentials
-      run: |
-        echo "=== Checking for hardcoded credentials ==="
-        if grep -r "mongodb+srv://" backend/src/ --exclude-dir=node_modules 2>/dev/null; then
-          echo "✗ ERROR: Production MongoDB URI found in source"
-          exit 1
-        fi
-        if grep -r "@gmail.com" backend/src/ --exclude-dir=node_modules 2>/dev/null | grep -v "example\|noreply\|your-email"; then
-          echo "✗ WARNING: Potential email address found in source"
-        fi
-        echo "✓ No obvious hardcoded credentials found"
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Verify TEST_MODE default is true in backend
+        run: |
+          echo "=== Checking backend .env.example ==="
+          if ! grep -q "TEST_MODE=true" backend/.env.example; then
+            echo "✗ ERROR: TEST_MODE not set to true"
+            exit 1
+          fi
+          echo "✓ TEST_MODE is properly set to true"
+
+      - name: Check email service uses TEST_MODE
+        run: |
+          echo "=== Checking email service implementation ==="
+          if ! grep -q "config.testMode" \
+            backend/src/utils/emailService.js; then
+            echo "✗ ERROR: Email service doesn't check TEST_MODE"
+            exit 1
+          fi
+          echo "✓ Email service properly checks TEST_MODE"
+
+      - name: Verify no hardcoded production credentials
+        run: |
+          echo "=== Checking for hardcoded credentials ==="
+          if grep -r "mongodb+srv://" backend/src/ \
+            --exclude-dir=node_modules 2>/dev/null; then
+            echo "✗ ERROR: Production MongoDB URI found in source"
+            exit 1
+          fi
+          if grep -r "@gmail.com" backend/src/ \
+            --exclude-dir=node_modules 2>/dev/null | \
+            grep -v "example\|noreply\|your-email"; then
+            echo "✗ WARNING: Potential email address found"
+          fi
+          echo "✓ No obvious hardcoded credentials found"
 
   build-status:
     name: Build Status Summary
@@ -173,42 +177,47 @@ jobs:
     if: always()
     permissions:
       contents: read
-    
+
     steps:
-    - name: Check build status
-      run: |
-        echo "=== CI Build Status Summary ==="
-        echo ""
-        if [ "${{ needs.security-check.result }}" != "success" ]; then
-          echo "❌ Security checks failed!"
-        else
-          echo "✅ Security checks passed"
-        fi
-        
-        if [ "${{ needs.test-backend.result }}" != "success" ]; then
-          echo "❌ Backend tests failed!"
-        else
-          echo "✅ Backend tests passed"
-        fi
-        
-        if [ "${{ needs.codeql-analysis.result }}" != "success" ]; then
-          echo "❌ CodeQL analysis failed!"
-        else
-          echo "✅ CodeQL analysis passed"
-        fi
-        
-        if [ "${{ needs.test-mode-validation.result }}" != "success" ]; then
-          echo "❌ TEST_MODE validation failed!"
-        else
-          echo "✅ TEST_MODE validation passed"
-        fi
-        
-        echo ""
-        if [ "${{ needs.security-check.result }}" != "success" ] || \
-           [ "${{ needs.test-backend.result }}" != "success" ] || \
-           [ "${{ needs.codeql-analysis.result }}" != "success" ] || \
-           [ "${{ needs.test-mode-validation.result }}" != "success" ]; then
-          echo "❌ Overall build FAILED - Check logs above for details"
-          exit 1
-        fi
-        echo "✅ All checks PASSED - Build successful!"
+      - name: Check build status
+        run: |
+          echo "=== CI Build Status Summary ==="
+          echo ""
+          if [ "${{ needs.security-check.result }}" != "success" ]
+          then
+            echo "❌ Security checks failed!"
+          else
+            echo "✅ Security checks passed"
+          fi
+
+          if [ "${{ needs.test-backend.result }}" != "success" ]; then
+            echo "❌ Backend tests failed!"
+          else
+            echo "✅ Backend tests passed"
+          fi
+
+          if [ "${{ needs.codeql-analysis.result }}" != "success" ]
+          then
+            echo "❌ CodeQL analysis failed!"
+          else
+            echo "✅ CodeQL analysis passed"
+          fi
+
+          if [ "${{ needs.test-mode-validation.result }}" != \
+            "success" ]; then
+            echo "❌ TEST_MODE validation failed!"
+          else
+            echo "✅ TEST_MODE validation passed"
+          fi
+
+          echo ""
+          if [ "${{ needs.security-check.result }}" != "success" ] \
+            || [ "${{ needs.test-backend.result }}" != "success" ] \
+            || [ "${{ needs.codeql-analysis.result }}" != \
+            "success" ] || \
+            [ "${{ needs.test-mode-validation.result }}" != \
+            "success" ]; then
+            echo "❌ Overall build FAILED - Check logs"
+            exit 1
+          fi
+          echo "✅ All checks PASSED - Build successful!"
