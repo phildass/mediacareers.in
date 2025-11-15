@@ -203,20 +203,17 @@ jobs:
             echo "✅ CodeQL analysis passed"
           fi
 
-          if [ "${{ needs.test-mode-validation.result }}" != \
-            "success" ]; then
+          if [ "${{ needs.test-mode-validation.result }}" != "success" ]; then
             echo "❌ TEST_MODE validation failed!"
           else
             echo "✅ TEST_MODE validation passed"
           fi
 
           echo ""
-          if [ "${{ needs.security-check.result }}" != "success" ] \
-            || [ "${{ needs.test-backend.result }}" != "success" ] \
-            || [ "${{ needs.codeql-analysis.result }}" != \
-            "success" ] || \
-            [ "${{ needs.test-mode-validation.result }}" != \
-            "success" ]; then
+          if [ "${{ needs.security-check.result }}" != "success" ] || \
+             [ "${{ needs.test-backend.result }}" != "success" ] || \
+             [ "${{ needs.codeql-analysis.result }}" != "success" ] || \
+             [ "${{ needs.test-mode-validation.result }}" != "success" ]; then
             echo "❌ Overall build FAILED - Check logs"
             exit 1
           fi

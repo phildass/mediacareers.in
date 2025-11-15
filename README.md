@@ -1,127 +1,153 @@
-# MediaCareers.in
+actionlint
+==========
+[![CI Badge][]][CI]
+[![API Document][api-badge]][apidoc]
 
-MediaCareers.in is an AI-driven job platform focused on careers in the media and aligned industries across India. It connects journalists, editors, sub-editors, copy editors, social media managers, PR and corporate communications professionals, content creators and other media specialists with curated job opportunities and employer profiles.
+[actionlint][repo] is a static checker for GitHub Actions workflow files. [Try it online!][playground]
 
-## About
-This project aggregates listings (manual + scraped), offers AI-assisted resume and cover-letter help, and provides a simple membership model:
-- Premium membership: Rs 199 for 3 months (placeholder UPI QR/flow for now).
-- Juniors/freshers: free membership eligibility determined by experience extracted from uploaded or entered resumes.
-- Unlimited applications for premium members while membership is active.
+Features:
 
-Note: During development and testing, applications and emails are routed to a test address (info@phildass.com) or suppressed depending on TEST_MODE. Do not disable TEST_MODE until you have verified email/payment configurations.
+- **Syntax check for workflow files** to check unexpected or missing keys following [workflow syntax][syntax-doc]
+- **Strong type check for `${{ }}` expressions** to catch several semantic errors like access to not existing property,
+  type mismatches, ...
+- **Actions usage check** to check that inputs at `with:` and outputs in `steps.{id}.outputs` are correct
+- **Reusable workflow check** to check inputs/outputs/secrets of reusable workflows and workflow calls
+- **[shellcheck][] and [pyflakes][] integrations** for scripts at `run:`
+- **Security checks**; [script injection][script-injection-doc] by untrusted inputs, hard-coded credentials
+- **Other several useful checks**; [glob syntax][filter-pattern-doc] validation, dependencies check for `needs:`,
+  runner label validation, cron syntax validation, ...
 
-## Features
-- AI-powered job matching and job recommendations
-- Resume upload (file or pasted text) and basic resume parsing
-- AI assistance for writing and tailoring resumes and cover letters
-- Job search and listing pages with media-specific categories:
-  - Journalism & Reporting
-  - Editing & Copy Editing
-  - PR & Corporate Communications
-  - Social Media Management
-  - Content Creation and more
-- Employer/company profiles and a directory of media/education institutions
-- Free employer job-posting form and admin-curated listings
-- Scraper skeleton (must respect robots.txt and site ToS; rate-limited)
-- Admin area (hidden link: /admin) protected via environment-configured credentials
-- Privacy policy placeholder included in repository
+See [the full list](docs/checks.md) of checks done by actionlint.
 
-## Getting started (development)
-1. Copy `.env.example` to `.env` and update values (do NOT commit `.env`).
-2. Install dependencies:
-   - Root (client): `npm install --legacy-peer-deps`
-   - Backend: `cd backend && npm install`
-3. Start development servers:
-   - Client: `npm run dev` (Next.js dev server on port 3000)
-   - Backend: `cd backend && npm run dev` (API server on port 3000)
-   - Both: `npm run dev:full` (runs both servers concurrently)
-4. Keep `TEST_MODE=true` while testing so that emails and application deliveries are suppressed or sent to the test address.
+<img src="https://github.com/rhysd/ss/blob/master/actionlint/main.gif?raw=true" alt="actionlint reports 7 errors" width="806" height="492"/>
 
-## Running CI locally
+**Example of broken workflow:**
 
-To test your changes locally before pushing (simulating CI):
-
-### Client Build
-```bash
-# Build without requiring production secrets
-TEST_MODE=true NEXT_PUBLIC_API_URL=http://localhost:3000 npm run build
-
-# Verify the build output
-ls -la out/
-
-# Run linting
-npm run lint
+```yaml
+on:
+  push:
+    branch: main
+    tags:
+      - 'v\d+'
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [macos-latest, linux-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - run: echo "Checking commit '${{ github.event.head_commit.message }}'"
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node_version: 16.x
+      - uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ matrix.platform }}-node-${{ hashFiles('**/package-lock.json') }}
+        if: ${{ github.repository.permissions.admin == true }}
+      - run: npm install && npm test
 ```
 
-### Backend Tests
-```bash
-cd backend
+**actionlint reports 7 errors:**
 
-# Run tests in TEST_MODE (no real DB/email needed)
-TEST_MODE=true NODE_ENV=test npm test
-
-# Run linting
-npm run lint
+```
+test.yaml:3:5: unexpected key "branch" for "push" section. expected one of "branches", "branches-ignore", "paths", "paths-ignore", "tags", "tags-ignore", "types", "workflows" [syntax-check]
+  |
+3 |     branch: main
+  |     ^~~~~~~
+test.yaml:5:11: character '\' is invalid for branch and tag names. only special characters [, ?, +, *, \ ! can be escaped with \. see `man git-check-ref-format` for more details. note that regular expression is unavailable. note: filter pattern syntax is explained at https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet [glob]
+  |
+5 |       - 'v\d+'
+  |           ^~~~
+test.yaml:10:28: label "linux-latest" is unknown. available labels are "windows-latest", "windows-2022", "windows-2019", "windows-2016", "ubuntu-latest", "ubuntu-22.04", "ubuntu-20.04", "ubuntu-18.04", "macos-latest", "macos-12", "macos-12.0", "macos-11", "macos-11.0", "macos-10.15", "self-hosted", "x64", "arm", "arm64", "linux", "macos", "windows". if it is a custom label for self-hosted runner, set list of labels in actionlint.yaml config file [runner-label]
+   |
+10 |         os: [macos-latest, linux-latest]
+   |                            ^~~~~~~~~~~~~
+test.yaml:13:41: "github.event.head_commit.message" is potentially untrusted. avoid using it directly in inline scripts. instead, pass it through an environment variable. see https://docs.github.com/en/actions/learn-github-actions/security-hardening-for-github-actions for more details [expression]
+   |
+13 |       - run: echo "Checking commit '${{ github.event.head_commit.message }}'"
+   |                                         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+test.yaml:17:11: input "node_version" is not defined in action "actions/setup-node@v3". available inputs are "always-auth", "architecture", "cache", "cache-dependency-path", "check-latest", "node-version", "node-version-file", "registry-url", "scope", "token" [action]
+   |
+17 |           node_version: 16.x
+   |           ^~~~~~~~~~~~~
+test.yaml:21:20: property "platform" is not defined in object type {os: string} [expression]
+   |
+21 |           key: ${{ matrix.platform }}-node-${{ hashFiles('**/package-lock.json') }}
+   |                    ^~~~~~~~~~~~~~~
+test.yaml:22:17: receiver of object dereference "permissions" must be type of object but got "string" [expression]
+   |
+22 |         if: ${{ github.repository.permissions.admin == true }}
+   |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ```
 
-### Important: CI uses TEST_MODE=true by default
-- All CI workflows automatically set `TEST_MODE=true`
-- Builds and tests run without requiring real database credentials
-- Email service logs messages instead of sending them
-- This ensures CI can run independently without production secrets
+## Why?
 
-## Important configuration
-- **TEST_MODE**: when true, the app should not send real emails or applications to scraped employer addresses. Email service will log messages to console instead.
-- **ADMIN_USER / ADMIN_PASS**: admin credentials must live in environment variables and never be committed.
-- **EMAIL_***: SMTP credentials used only when TEST_MODE=false.
-- **MONGODB_URI**: MongoDB connection string. In TEST_MODE or tests, uses in-memory database or local test DB.
-- **JWT_SECRET**: Secret key for JWT tokens. Use a strong random string in production.
+- **Running a workflow is time consuming.** You need to push the changes and wait until the workflow runs on GitHub even if
+  it contains some trivial mistakes. [act][] is useful to debug the workflow locally. But it is not suitable for CI and still
+  time consuming when your workflow gets larger.
+- **Checks of workflow files by GitHub are very loose.** It reports no error even if unexpected keys are in mappings
+  (meant that some typos in keys). And also it reports no error when accessing to property which is actually not existing.
+  For example `matrix.foo` when no `foo` is defined in `matrix:` section, it is evaluated to `null` and causes no error.
+- **Some mistakes silently break a workflow.** Most common case I saw is specifying missing property to cache key. In the
+  case cache silently does not work properly but a workflow itself runs without error. So you might not notice the mistake
+  forever.
 
-## Payment
-- UPI QR is used as a placeholder in the UI. Implement a secure payment provider and verification flow before enabling real payments and toggling TEST_MODE off.
+## Quick start
 
-## Privacy & Compliance
-- privacy-policy.md is included as a starter. Update it with legal counsel before launch and ensure scraping follows site terms and data-protection guidance.
-- Do not store or share credentials, sensitive personal data, or payment details without proper security and encryption.
+Install `actionlint` command by downloading [the released binary][releases] or by Homebrew or by `go install`. See
+[the installation document](docs/install.md) for more details like how to manage the command with several package managers
+or run via Docker container.
 
-## Contributing & Workflow
-- Work in feature branches; open focused PRs (small, testable changes).
-- Keep secrets out of the repo; add environment variables to `.env` only.
-- Add unit tests for critical business logic (resume parsing, application sending).
-- Resolve merge conflicts by producing valid JSON or unioned lists (e.g., `.gitignore`) — avoid blindly accepting both sides in editors for JSON files.
+```sh
+go install github.com/rhysd/actionlint/cmd/actionlint@latest
+```
 
-## Deployment
+Basically all you need to do is run the `actionlint` command in your repository. actionlint automatically detects workflows and
+checks errors. actionlint focuses on finding out mistakes. It tries to catch errors as much as possible and make false positives
+as minimal as possible.
 
-MediaCareers.in uses a split deployment architecture:
-- **Client (Frontend)**: Deploy to Vercel using Next.js static export
-- **Backend (API)**: Deploy separately to Render, Railway, or a VPS
+```sh
+actionlint
+```
 
-### Quick Start
-1. **Deploy Client to Vercel**: Connect your GitHub repository to Vercel and it will auto-deploy the Next.js app
-2. **Deploy Backend to Render**: Create a new Web Service on Render pointing to the `backend/` directory
-3. **Configure MongoDB**: Use MongoDB Atlas for the production database
-4. **Set Environment Variables**: Configure all required environment variables in Vercel (for frontend) and Render/VPS (for backend)
+Another option to try actionlint is [the online playground][playground]. Your browser can run actionlint through WebAssembly.
 
-### Detailed Guide
-See [docs/deploy-vercel.md](docs/deploy-vercel.md) for comprehensive step-by-step instructions including:
-- Vercel deployment and custom domain setup for mediacareers.in
-- Backend deployment options (Render vs VPS)
-- MongoDB Atlas configuration
-- Environment variable reference
-- Security checklist
-- Troubleshooting common issues
+See [the usage document](docs/usage.md) for more details.
 
-### Important Notes
-- Keep `TEST_MODE=true` in backend until email and payment are fully verified
-- Never commit secrets or credentials to the repository
-- Use Vercel and Render environment variable UIs to manage sensitive configuration
-- The backend should be deployed separately from the frontend
+## Documents
 
-## Quick checklist before production
-- Replace TEST_MODE with verified email and payment integrations.
-- Harden authentication and admin access (replace basic auth with proper user management).
-- Verify scrapers respect robots.txt and rate limits.
-- Security audit for secrets, dependency vulnerabilities, and input validation.
+- [Checks](docs/checks.md): Full list of all checks done by actionlint with example inputs, outputs, and playground links.
+- [Installation](docs/install.md): Installation instructions. Prebuilt binaries, Homebrew package, a Docker image, building from
+  source, a download script (for CI) are available.
+- [Usage](docs/usage.md): How to use `actionlint` command locally or on GitHub Actions, the online playground, an official Docker
+  image, and integrations with reviewdog, Problem Matchers, super-linter, pre-commit, VS Code.
+- [Configuration](docs/config.md): How to configure actionlint behavior. Currently only labels of self-hosted runners can be
+  configured.
+- [Go API](docs/api.md): How to use actionlint as Go library.
+- [References](docs/reference.md): Links to resources.
+
+## Bug reporting
+
+When you see some bugs or false positives, it is helpful to [file a new issue][issue-form] with a minimal example
+of input. Giving me some feedbacks like feature requests or ideas of additional checks is also welcome.
 
 ## License
-MIT — see LICENSE file.
+
+actionlint is distributed under [the MIT license](./LICENSE.txt).
+
+[CI Badge]: https://github.com/rhysd/actionlint/workflows/CI/badge.svg?branch=main&event=push
+[CI]: https://github.com/rhysd/actionlint/actions?query=workflow%3ACI+branch%3Amain
+[api-badge]: https://pkg.go.dev/badge/github.com/rhysd/actionlint.svg
+[apidoc]: https://pkg.go.dev/github.com/rhysd/actionlint
+[repo]: https://github.com/rhysd/actionlint
+[playground]: https://rhysd.github.io/actionlint/
+[shellcheck]: https://github.com/koalaman/shellcheck
+[pyflakes]: https://github.com/PyCQA/pyflakes
+[act]: https://github.com/nektos/act
+[syntax-doc]: https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions
+[filter-pattern-doc]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet
+[script-injection-doc]: https://docs.github.com/en/actions/learn-github-actions/security-hardening-for-github-actions#understanding-the-risk-of-script-injections
+[issue-form]: https://github.com/rhysd/actionlint/issues/new
+[releases]: https://github.com/rhysd/actionlint/releases
