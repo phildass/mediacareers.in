@@ -37,9 +37,9 @@ export default function AboutPage() {
           </p>
           
           <p className="text-lg text-gray-700 mb-4">
-            We understand the unique challenges faced by media professionals in today's rapidly evolving landscape. 
+            We understand the unique challenges faced by media professionals in today&apos;s rapidly evolving landscape. 
             Traditional job boards often dilute your search with irrelevant opportunities, wasting precious time. 
-            That's why we built MediaCareers.in—a specialized platform that speaks your language and understands 
+            That&apos;s why we built MediaCareers.in—a specialized platform that speaks your language and understands 
             your career aspirations.
           </p>
         </div>
@@ -62,14 +62,14 @@ export default function AboutPage() {
               <h2 className="text-2xl font-bold text-gray-900">Our Vision</h2>
             </div>
             <p className="text-gray-700">
-              To become India's premier career platform for the media industry, where every journalist, editor, 
+              To become India&apos;s premier career platform for the media industry, where every journalist, editor, 
               communicator, and content creator finds their perfect next opportunity powered by AI innovation.
             </p>
           </div>
         </div>
 
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-8 text-white mb-8">
-          <h2 className="text-2xl font-bold mb-4">Why We're Different</h2>
+          <h2 className="text-2xl font-bold mb-4">Why We&apos;re Different</h2>
           <ul className="space-y-3">
             <li className="flex items-start">
               <span className="text-2xl mr-2">🎯</span>
