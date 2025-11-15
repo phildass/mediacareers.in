@@ -64,7 +64,7 @@ export default function Home() {
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600"> Media Career</span>
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            India's first AI-driven job platform exclusively for journalists, editors, PR specialists, 
+            India&apos;s first AI-driven job platform exclusively for journalists, editors, PR specialists, 
             corporate communicators, and content creators. Specialized, intelligent, and lightning fast.
           </p>
           
@@ -155,7 +155,7 @@ export default function Home() {
         <div className="bg-gray-900 rounded-2xl p-12 text-center text-white">
           <h2 className="text-3xl font-bold mb-4">Ready to Find Your Dream Job?</h2>
           <p className="text-gray-300 mb-8 max-w-2xl mx-auto">
-            Join thousands of media professionals who've found their perfect role through our AI-powered platform.
+            Join thousands of media professionals who&apos;ve found their perfect role through our AI-powered platform.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button className="bg-white text-gray-900 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition">
@@ -178,7 +178,7 @@ export default function Home() {
                 <span className="ml-2 text-xl font-bold">MediaCareers.in</span>
               </div>
               <p className="text-gray-400">
-                India's first AI-driven job platform for media professionals.
+                India&apos;s first AI-driven job platform for media professionals.
               </p>
             </div>
             <div>
