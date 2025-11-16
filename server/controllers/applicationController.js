@@ -60,13 +60,13 @@ exports.uploadResume = async (req, res) => {
       }
 
       // Parse resume with AI
-      // Validate file path to prevent path injection
-      // Note: req.file.path is controlled by multer's storage configuration
-      // and has already been sanitized, but we add an extra check
-      if (!req.file.path || req.file.path.includes('..')) {
+      // Robustly validate file path to prevent path injection
+      const UPLOADS_ROOT = path.resolve('uploads/resumes');
+      const absFilePath = path.resolve(req.file.path);
+      if (!absFilePath.startsWith(UPLOADS_ROOT + path.sep)) {
         return res.status(400).json({
           success: false,
-          message: 'Invalid file path'
+          message: 'Invalid or unsafe file path'
         });
       }
       
