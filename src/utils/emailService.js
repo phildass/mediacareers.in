@@ -1,8 +1,3 @@
-/**
- * Test-safe EmailService
- * When TEST_MODE=true or NODE_ENV=test this implementation does NOT send real emails.
- * It stores sent messages in-memory for assertions in tests.
- */
 const nodemailer = require('nodemailer');
 
 class EmailService {
