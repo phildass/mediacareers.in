@@ -9,6 +9,8 @@ jobs:
   deploy:
     name: Deploy to Vercel
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     
     # Only run if VERCEL_TOKEN is set
     if: github.repository == 'phildass/mediacareers.in'
