@@ -42,7 +42,8 @@ exports.register = async (req, res) => {
 
     // Send welcome email (stub - logs in TEST_MODE)
     try {
-      await emailService.sendWelcomeEmail(user);
+      const emailServiceInstance = new emailService();
+      await emailServiceInstance.sendWelcomeEmail(user.email, { name: user.firstName });
     } catch (emailError) {
       console.error('Failed to send welcome email:', emailError);
       // Don't fail registration if email fails
