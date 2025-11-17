@@ -9,6 +9,10 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -18,6 +22,17 @@ jobs:
         with:
           node-version: '20.x'
 
+      - name: Verify Vercel token present
+        run: |
+          if [ -z "${VERCEL_TOKEN}" ]; then
+            echo "ERROR: VERCEL_TOKEN secret is not set. Add it under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          echo "VERCEL_TOKEN is set (masked)."
+      
+      - name: Show Vercel CLI version
+        run: npx vercel --version || true
+
       - name: Install dependencies
         run: npm ci
 
@@ -25,7 +40,4 @@ jobs:
         run: npm run build
 
       - name: Deploy to Vercel
-        run: npx vercel --prod --confirm --token "${{ secrets.VERCEL_TOKEN }}"
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: npx vercel --prod --confirm --token "$VERCEL_TOKEN"
