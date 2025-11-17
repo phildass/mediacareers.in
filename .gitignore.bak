@@ -28,6 +28,7 @@ yarn-error.log*
 Thumbs.db
 
 # vercel
+.vercel
 
 # typescript
 *.tsbuildinfo
@@ -50,4 +51,3 @@ uploads/
 >>>>>>> origin/main
 yarn.lock
 pnpm-lock.yaml
-
