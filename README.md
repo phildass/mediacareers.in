@@ -1,153 +1,412 @@
-actionlint
-==========
-[![CI Badge][]][CI]
-[![API Document][api-badge]][apidoc]
+# MediaCareers.in
 
-[actionlint][repo] is a static checker for GitHub Actions workflow files. [Try it online!][playground]
+A comprehensive job board platform for media professionals in India, built with Next.js and Express.
 
-Features:
+## 🚀 Features
 
-- **Syntax check for workflow files** to check unexpected or missing keys following [workflow syntax][syntax-doc]
-- **Strong type check for `${{ }}` expressions** to catch several semantic errors like access to not existing property,
-  type mismatches, ...
-- **Actions usage check** to check that inputs at `with:` and outputs in `steps.{id}.outputs` are correct
-- **Reusable workflow check** to check inputs/outputs/secrets of reusable workflows and workflow calls
-- **[shellcheck][] and [pyflakes][] integrations** for scripts at `run:`
-- **Security checks**; [script injection][script-injection-doc] by untrusted inputs, hard-coded credentials
-- **Other several useful checks**; [glob syntax][filter-pattern-doc] validation, dependencies check for `needs:`,
-  runner label validation, cron syntax validation, ...
+- **Job Board**: Browse and search media jobs across various categories
+- **User Profiles**: Create and manage professional profiles
+- **Premium Membership**: Advanced features for job seekers
+- **Admin Dashboard**: Manage jobs, users, and platform content
+- **AI-Powered Features**: Smart job matching and recommendations
 
-See [the full list](docs/checks.md) of checks done by actionlint.
+## ��️ Tech Stack
 
-<img src="https://github.com/rhysd/ss/blob/master/actionlint/main.gif?raw=true" alt="actionlint reports 7 errors" width="806" height="492"/>
+### Frontend
+- **Framework**: Next.js 16
+- **UI**: React 19, Tailwind CSS 4.0
+- **Icons**: Lucide React
 
-**Example of broken workflow:**
+### Backend
+- **Server**: Express.js
+- **Database**: MongoDB
+- **Authentication**: JWT
+- **Email**: Nodemailer
 
-```yaml
-on:
-  push:
-    branch: main
-    tags:
-      - 'v\d+'
-jobs:
-  test:
-    strategy:
-      matrix:
-        os: [macos-latest, linux-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - run: echo "Checking commit '${{ github.event.head_commit.message }}'"
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node_version: 16.x
-      - uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ matrix.platform }}-node-${{ hashFiles('**/package-lock.json') }}
-        if: ${{ github.repository.permissions.admin == true }}
-      - run: npm install && npm test
-```
+## 📋 Prerequisites
 
-**actionlint reports 7 errors:**
+- Node.js 18.x or 20.x
+- MongoDB (local or Atlas)
+- npm or yarn
 
-```
-test.yaml:3:5: unexpected key "branch" for "push" section. expected one of "branches", "branches-ignore", "paths", "paths-ignore", "tags", "tags-ignore", "types", "workflows" [syntax-check]
-  |
-3 |     branch: main
-  |     ^~~~~~~
-test.yaml:5:11: character '\' is invalid for branch and tag names. only special characters [, ?, +, *, \ ! can be escaped with \. see `man git-check-ref-format` for more details. note that regular expression is unavailable. note: filter pattern syntax is explained at https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet [glob]
-  |
-5 |       - 'v\d+'
-  |           ^~~~
-test.yaml:10:28: label "linux-latest" is unknown. available labels are "windows-latest", "windows-2022", "windows-2019", "windows-2016", "ubuntu-latest", "ubuntu-22.04", "ubuntu-20.04", "ubuntu-18.04", "macos-latest", "macos-12", "macos-12.0", "macos-11", "macos-11.0", "macos-10.15", "self-hosted", "x64", "arm", "arm64", "linux", "macos", "windows". if it is a custom label for self-hosted runner, set list of labels in actionlint.yaml config file [runner-label]
-   |
-10 |         os: [macos-latest, linux-latest]
-   |                            ^~~~~~~~~~~~~
-test.yaml:13:41: "github.event.head_commit.message" is potentially untrusted. avoid using it directly in inline scripts. instead, pass it through an environment variable. see https://docs.github.com/en/actions/learn-github-actions/security-hardening-for-github-actions for more details [expression]
-   |
-13 |       - run: echo "Checking commit '${{ github.event.head_commit.message }}'"
-   |                                         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-test.yaml:17:11: input "node_version" is not defined in action "actions/setup-node@v3". available inputs are "always-auth", "architecture", "cache", "cache-dependency-path", "check-latest", "node-version", "node-version-file", "registry-url", "scope", "token" [action]
-   |
-17 |           node_version: 16.x
-   |           ^~~~~~~~~~~~~
-test.yaml:21:20: property "platform" is not defined in object type {os: string} [expression]
-   |
-21 |           key: ${{ matrix.platform }}-node-${{ hashFiles('**/package-lock.json') }}
-   |                    ^~~~~~~~~~~~~~~
-test.yaml:22:17: receiver of object dereference "permissions" must be type of object but got "string" [expression]
-   |
-22 |         if: ${{ github.repository.permissions.admin == true }}
-   |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-```
+## 🏃 Getting Started
 
-## Why?
+### 1. Clone the repository
 
-- **Running a workflow is time consuming.** You need to push the changes and wait until the workflow runs on GitHub even if
-  it contains some trivial mistakes. [act][] is useful to debug the workflow locally. But it is not suitable for CI and still
-  time consuming when your workflow gets larger.
-- **Checks of workflow files by GitHub are very loose.** It reports no error even if unexpected keys are in mappings
-  (meant that some typos in keys). And also it reports no error when accessing to property which is actually not existing.
-  For example `matrix.foo` when no `foo` is defined in `matrix:` section, it is evaluated to `null` and causes no error.
-- **Some mistakes silently break a workflow.** Most common case I saw is specifying missing property to cache key. In the
-  case cache silently does not work properly but a workflow itself runs without error. So you might not notice the mistake
-  forever.
+\`\`\`bash
+git clone https://github.com/phildass/mediacareers.in.git
+cd mediacareers.in
+\`\`\`
 
-## Quick start
+### 2. Install dependencies
 
-Install `actionlint` command by downloading [the released binary][releases] or by Homebrew or by `go install`. See
-[the installation document](docs/install.md) for more details like how to manage the command with several package managers
-or run via Docker container.
+\`\`\`bash
+# Install frontend dependencies
+npm install
 
-```sh
-go install github.com/rhysd/actionlint/cmd/actionlint@latest
-```
+# Install backend dependencies
+cd backend
+npm install
+cd ..
+\`\`\`
 
-Basically all you need to do is run the `actionlint` command in your repository. actionlint automatically detects workflows and
-checks errors. actionlint focuses on finding out mistakes. It tries to catch errors as much as possible and make false positives
-as minimal as possible.
+### 3. Set up environment variables
 
-```sh
-actionlint
-```
+Copy the example environment file and update with your values:
 
-Another option to try actionlint is [the online playground][playground]. Your browser can run actionlint through WebAssembly.
+\`\`\`bash
+cp .env.example .env
+\`\`\`
 
-See [the usage document](docs/usage.md) for more details.
+Edit \`.env\` with your configuration. See [Environment Variables](#environment-variables) section below.
 
-## Documents
+### 4. Run in development mode
 
-- [Checks](docs/checks.md): Full list of all checks done by actionlint with example inputs, outputs, and playground links.
-- [Installation](docs/install.md): Installation instructions. Prebuilt binaries, Homebrew package, a Docker image, building from
-  source, a download script (for CI) are available.
-- [Usage](docs/usage.md): How to use `actionlint` command locally or on GitHub Actions, the online playground, an official Docker
-  image, and integrations with reviewdog, Problem Matchers, super-linter, pre-commit, VS Code.
-- [Configuration](docs/config.md): How to configure actionlint behavior. Currently only labels of self-hosted runners can be
-  configured.
-- [Go API](docs/api.md): How to use actionlint as Go library.
-- [References](docs/reference.md): Links to resources.
+\`\`\`bash
+# Run both frontend and backend
+npm run dev:full
 
-## Bug reporting
+# Or run separately:
+# Frontend only
+npm run dev
 
-When you see some bugs or false positives, it is helpful to [file a new issue][issue-form] with a minimal example
-of input. Giving me some feedbacks like feature requests or ideas of additional checks is also welcome.
+# Backend only
+npm run server
+\`\`\`
 
-## License
+Visit:
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:5000
 
-actionlint is distributed under [the MIT license](./LICENSE.txt).
+## 🌍 Environment Variables
 
-[CI Badge]: https://github.com/rhysd/actionlint/workflows/CI/badge.svg?branch=main&event=push
-[CI]: https://github.com/rhysd/actionlint/actions?query=workflow%3ACI+branch%3Amain
-[api-badge]: https://pkg.go.dev/badge/github.com/rhysd/actionlint.svg
-[apidoc]: https://pkg.go.dev/github.com/rhysd/actionlint
-[repo]: https://github.com/rhysd/actionlint
-[playground]: https://rhysd.github.io/actionlint/
-[shellcheck]: https://github.com/koalaman/shellcheck
-[pyflakes]: https://github.com/PyCQA/pyflakes
-[act]: https://github.com/nektos/act
-[syntax-doc]: https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions
-[filter-pattern-doc]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet
-[script-injection-doc]: https://docs.github.com/en/actions/learn-github-actions/security-hardening-for-github-actions#understanding-the-risk-of-script-injections
-[issue-form]: https://github.com/rhysd/actionlint/issues/new
-[releases]: https://github.com/rhysd/actionlint/releases
+See \`.env.example\` for a complete list of required environment variables.
+
+### Frontend Variables (Vercel)
+- \`NEXT_PUBLIC_API_BASE_URL\` - Backend API URL
+
+### Backend Variables (Railway/Render/VPS)
+- \`MONGODB_URI\` - MongoDB connection string
+- \`JWT_SECRET\` - Secret key for JWT tokens
+- \`EMAIL_HOST\`, \`EMAIL_PORT\`, \`EMAIL_USER\`, \`EMAIL_PASS\` - SMTP configuration
+- Additional variables listed in \`.env.example\`
+
+## 📦 Deploying
+
+This guide covers deploying MediaCareers.in to production using Vercel for the frontend and Railway/Render for the backend.
+
+### Architecture
+
+- **Frontend (Next.js)**: Deployed to Vercel
+- **Backend (Express)**: Deployed to Railway, Render, or VPS
+- **Database**: MongoDB Atlas
+- **CI/CD**: GitHub Actions
+
+### Prerequisites for Deployment
+
+1. **GitHub Repository**: Connected to this repository
+2. **Vercel Account**: Sign up at https://vercel.com
+3. **Backend Hosting**: Account on Railway, Render, or a VPS
+4. **MongoDB Atlas**: Database cluster at https://www.mongodb.com/cloud/atlas
+5. **Domain**: (Optional) Custom domain for production
+
+### Step 1: Deploy Backend
+
+Choose one of the following platforms:
+
+#### Option A: Deploy to Railway (Recommended)
+
+1. Go to https://railway.app and sign up/login
+2. Click "New Project" → "Deploy from GitHub repo"
+3. Select \`phildass/mediacareers.in\`
+4. Configure:
+   - **Root Directory**: \`backend\`
+   - **Start Command**: \`npm start\`
+   
+5. Add environment variables in Railway dashboard:
+   \`\`\`
+   NODE_ENV=production
+   PORT=5000
+   MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/mediacareers
+   JWT_SECRET=<generate-strong-secret>
+   EMAIL_HOST=smtp.gmail.com
+   EMAIL_PORT=587
+   EMAIL_USER=your-email@gmail.com
+   EMAIL_PASS=your-app-password
+   EMAIL_FROM=noreply@mediacareers.in
+   \`\`\`
+
+6. Deploy and note your backend URL (e.g., \`https://your-app.railway.app\`)
+
+#### Option B: Deploy to Render
+
+1. Go to https://render.com and sign up/login
+2. Click "New +" → "Web Service"
+3. Connect your GitHub repository
+4. Configure:
+   - **Name**: \`mediacareers-api\`
+   - **Root Directory**: \`backend\`
+   - **Build Command**: \`npm install\`
+   - **Start Command**: \`npm start\`
+
+5. Add environment variables (same as Railway above)
+6. Deploy and note your backend URL (e.g., \`https://mediacareers-api.onrender.com\`)
+
+### Step 2: Set Up MongoDB Atlas
+
+1. Create a cluster at https://www.mongodb.com/cloud/atlas
+2. Create a database user with read/write permissions
+3. Whitelist your backend server's IP (or \`0.0.0.0/0\` for development)
+4. Get the connection string and update \`MONGODB_URI\` in your backend environment
+
+### Step 3: Deploy Frontend to Vercel
+
+#### Manual Deployment (Quick Start)
+
+1. Go to https://vercel.com/new
+2. Import the \`phildass/mediacareers.in\` repository
+3. Configure project:
+   - **Framework Preset**: Next.js (auto-detected)
+   - **Root Directory**: \`./\`
+   - **Build Command**: \`npm run build\`
+   
+4. Add environment variables in Vercel:
+   \`\`\`
+   NEXT_PUBLIC_API_BASE_URL=https://your-backend-url.com
+   \`\`\`
+
+5. Click "Deploy"
+6. Your site will be live at \`https://your-project.vercel.app\`
+
+#### Automated Deployment via GitHub Actions
+
+To enable automatic deployments on push to \`main\`:
+
+1. **Get Vercel tokens**:
+   - Go to https://vercel.com/account/tokens
+   - Create a new token and copy it
+
+2. **Get Vercel project IDs**:
+   \`\`\`bash
+   npm i -g vercel
+   vercel login
+   vercel link
+   \`\`\`
+   This will show your \`VERCEL_ORG_ID\` and \`VERCEL_PROJECT_ID\`
+
+3. **Add secrets to GitHub**:
+   - Go to your GitHub repository
+   - Settings → Secrets and variables → Actions
+   - Add the following repository secrets:
+     - \`VERCEL_TOKEN\`: Your Vercel token
+     - \`VERCEL_ORG_ID\`: Your Vercel organization ID
+     - \`VERCEL_PROJECT_ID\`: Your Vercel project ID
+     - \`NEXT_PUBLIC_API_BASE_URL\`: Your backend URL (optional, can be set in Vercel)
+
+4. **Deploy**: Push to \`main\` branch
+   \`\`\`bash
+   git push origin main
+   \`\`\`
+   
+   The workflow in \`.github/workflows/vercel-deploy.yml\` will automatically:
+   - Install dependencies
+   - Build the Next.js app
+   - Deploy to Vercel
+
+### Step 4: Configure Custom Domain
+
+#### In Vercel:
+
+1. Go to your project → Settings → Domains
+2. Add your domain (e.g., \`mediacareers.in\`)
+3. Follow DNS configuration instructions from Vercel
+4. Update DNS records at your domain registrar:
+   - Type: \`A\`, Name: \`@\`, Value: \`76.76.21.21\` (Vercel IP)
+   - Type: \`CNAME\`, Name: \`www\`, Value: \`cname.vercel-dns.com\`
+
+5. Wait for DNS propagation (up to 48 hours)
+6. Vercel will automatically provision SSL certificate
+
+### Step 5: Post-Deployment Checklist
+
+- [ ] Frontend loads at your Vercel URL
+- [ ] Backend API is accessible (test \`/health\` endpoint)
+- [ ] Database connection is working
+- [ ] Environment variables are set correctly
+- [ ] Email service is configured (for user notifications)
+- [ ] SSL certificates are active
+- [ ] Custom domain is working (if configured)
+- [ ] Test user registration and login flows
+
+### Required Secrets for GitHub Actions
+
+To use the automated Vercel deployment workflow, you need to add these secrets in your GitHub repository (Settings → Secrets and variables → Actions):
+
+| Secret Name | Description | Required |
+|------------|-------------|----------|
+| \`VERCEL_TOKEN\` | Your Vercel authentication token | ✅ Yes |
+| \`VERCEL_ORG_ID\` | Your Vercel organization ID | Optional* |
+| \`VERCEL_PROJECT_ID\` | Your Vercel project ID | Optional* |
+| \`NEXT_PUBLIC_API_BASE_URL\` | Backend API URL | Optional** |
+
+\* If not provided, the action will use the Vercel CLI defaults  
+\** Can be set in Vercel project settings instead
+
+#### How to Get These Values:
+
+1. **VERCEL_TOKEN**: 
+   - Go to https://vercel.com/account/tokens
+   - Click "Create Token"
+   - Give it a name (e.g., "GitHub Actions")
+   - Copy the token
+
+2. **VERCEL_ORG_ID and VERCEL_PROJECT_ID**:
+   \`\`\`bash
+   npm i -g vercel
+   vercel login
+   vercel link
+   \`\`\`
+   The IDs will be shown in the output or saved in \`.vercel/project.json\`
+
+3. **NEXT_PUBLIC_API_BASE_URL**:
+   - Your deployed backend URL (e.g., \`https://your-api.railway.app\`)
+   - Can also be set in Vercel project environment variables
+
+### Environment Setup Summary
+
+| Platform | Environment Variables | Where to Set |
+|----------|----------------------|--------------|
+| **Vercel (Frontend)** | \`NEXT_PUBLIC_API_BASE_URL\` | Vercel project settings or GitHub secret |
+| **Railway/Render (Backend)** | All backend vars (see \`.env.example\`) | Platform dashboard |
+| **GitHub Actions** | \`VERCEL_TOKEN\`, \`VERCEL_ORG_ID\`, \`VERCEL_PROJECT_ID\` | GitHub repo secrets |
+
+### Monitoring Deployment
+
+- **Vercel Deployments**: https://vercel.com/dashboard
+- **Railway Deployments**: https://railway.app/dashboard
+- **GitHub Actions**: https://github.com/phildass/mediacareers.in/actions
+
+### Continuous Deployment
+
+Once set up:
+- **Frontend**: Automatically deploys on push to \`main\` (via GitHub Actions or Vercel Git integration)
+- **Backend**: Automatically deploys on push to \`main\` (if enabled in Railway/Render)
+
+### Rollback
+
+If a deployment fails:
+
+**Vercel:**
+1. Go to Deployments in Vercel dashboard
+2. Find previous working deployment
+3. Click "..." → "Promote to Production"
+
+**Railway/Render:**
+1. Go to your service dashboard
+2. Redeploy a previous commit
+3. Or manually revert and push
+
+### Troubleshooting
+
+#### Build Fails
+- Check build logs in Vercel/Railway/Render dashboard
+- Verify all environment variables are set
+- Ensure dependencies are in \`package.json\`
+- Test build locally: \`npm run build\`
+
+#### API Connection Errors
+- Verify \`NEXT_PUBLIC_API_BASE_URL\` matches backend URL
+- Check CORS configuration in backend
+- Ensure backend is running and accessible
+
+#### Database Connection Issues
+- Verify \`MONGODB_URI\` is correct
+- Check MongoDB Atlas network access settings
+- Ensure database user has proper permissions
+
+### Alternative: Using Vercel Integration
+
+Instead of GitHub Actions, you can also:
+
+1. Connect your repository directly to Vercel
+2. Vercel will automatically deploy on every push to \`main\`
+3. Set environment variables in Vercel project settings
+4. No need for GitHub Actions workflow
+
+This is simpler but gives less control over the deployment process.
+
+### Additional Resources
+
+- [Vercel Documentation](https://vercel.com/docs)
+- [Next.js Deployment](https://nextjs.org/docs/deployment)
+- [Railway Documentation](https://docs.railway.app)
+- [Render Documentation](https://render.com/docs)
+- [MongoDB Atlas Documentation](https://docs.atlas.mongodb.com)
+
+For detailed deployment guides, see:
+- \`/docs/deploy-vercel.md\` - Comprehensive Vercel deployment guide
+- \`/docs/ci-and-deployment.md\` - CI/CD and deployment strategies
+
+## 🧪 Testing
+
+\`\`\`bash
+# Run frontend tests
+npm test
+
+# Run backend tests
+cd backend
+npm test
+\`\`\`
+
+## 🔍 Linting
+
+\`\`\`bash
+# Lint frontend
+npm run lint
+
+# Lint backend
+cd backend
+npm run lint
+\`\`\`
+
+## 📁 Project Structure
+
+\`\`\`
+mediacareers.in/
+├── app/                    # Next.js app directory
+├── backend/                # Express backend
+│   ├── src/
+│   │   ├── controllers/
+│   │   ├── models/
+│   │   ├── routes/
+│   │   └── utils/
+│   └── server.js
+├── docs/                   # Documentation
+├── .github/
+│   └── workflows/         # CI/CD workflows
+├── package.json           # Frontend dependencies
+├── vercel.json           # Vercel configuration
+└── .env.example          # Environment variables template
+\`\`\`
+
+## 🤝 Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🔒 Security
+
+For security issues, please see [SECURITY.md](SECURITY.md).
+
+## 📧 Contact
+
+- **Email**: info@phildass.com
+- **Website**: https://mediacareers.in
+- **GitHub**: https://github.com/phildass/mediacareers.in
+
+## 🙏 Acknowledgments
+
+Built with ❤️ for the media community in India.
