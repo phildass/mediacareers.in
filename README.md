@@ -1,5 +1,13 @@
 # MediaCareers.in
 
+<img src="https://github.com/phildass/mediacareers.in/actions/workflows/vercel-deploy.yml/badge.svg">
+
+## Production URL
+
+The current production URL is stored in docs/production_url.txt.
+
+Raw file: https://raw.githubusercontent.com/phildass/mediacareers.in/main/docs/production_url.txt
+
 A comprehensive job board platform for media professionals in India, built with Next.js and Express.
 
 ## 🚀 Features
