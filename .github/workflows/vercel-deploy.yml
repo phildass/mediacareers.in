@@ -1,28 +1,68 @@
-#!/usr/bin/env bash
-# Robustly extract a Vercel deployment URL from Vercel CLI output or JSON.
-# Usage: extract_vercel_url.sh path/to/vercel-output.txt
-set -euo pipefail
+name: Vercel Deploy
 
-INPUT_FILE="${1:-/dev/stdin}"
-OUT=""
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
-# Try to parse JSON-like "url" fields (e.g. {"url":"https://..."}).
-if grep -qi '"url"' "$INPUT_FILE" 2>/dev/null || grep -qi '\\"url\\":' "$INPUT_FILE" 2>/dev/null; then
-  OUT=$(grep -Eo '"url"[[:space:]]*:[[:space:]]*"[^"]+"' "$INPUT_FILE" 2>/dev/null \
-    | head -n1 \
-    | sed -E 's/.*"url"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')
-fi
+permissions:
+  contents: write
 
-# Fallback: find the first https://*.vercel.app (or now.sh) or other http(s) hostname.
-if [ -z "$OUT" ]; then
-  OUT=$(grep -Eo 'https?://[a-z0-9._-]+\.(vercel\.app|now\.sh|[a-z0-9.-]+)' "$INPUT_FILE" 2>/dev/null | head -n1 || true)
-fi
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: vercel-deploy-${{ github.ref }}
+      cancel-in-progress: true
 
-# Final safety check: only print if it looks like an http URL
-if [[ "$OUT" =~ ^https?:// ]]; then
-  echo "$OUT"
-  exit 0
-fi
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
-# Nothing found
-exit 1
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@^28 || true
+
+      - name: Deploy to Vercel
+        id: vercel_deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Run vercel and capture output to a file for parsing
+          vercel --token "${VERCEL_TOKEN}" --prod --confirm 2>&1 | tee vercel-output.txt
+
+      - name: Extract production URL
+        id: extract_url
+        run: |
+          set -euo pipefail
+          mkdir -p docs
+          # Use the repo script to extract the URL from the captured output and write to docs/production_url.txt
+          ./.github/scripts/extract_vercel_url.sh vercel-output.txt > docs/production_url.txt
+          echo "url=$(cat docs/production_url.txt)" >> $GITHUB_OUTPUT
+
+      - name: Commit production URL
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Add the file and commit only if it changed
+          git add docs/production_url.txt || true
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update production deployment URL to ${{ steps.extract_url.outputs.url }}"
+            git push
+            echo "Committed and pushed production URL update"
+          fi

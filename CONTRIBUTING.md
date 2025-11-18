@@ -538,6 +538,44 @@ Reviewers will focus on:
 
 For questions or clarifications, please open an issue on GitHub.
 
+## Working with Pull Requests
+
+### Testing a Pull Request Locally
+
+To test a pull request locally before it's merged, follow these steps:
+
+```bash
+git clone https://github.com/phildass/mediacareers.in.git
+cd mediacareers.in
+git fetch origin pull/<PR_NUMBER>/head:pr-<PR_NUMBER>
+git checkout pr-<PR_NUMBER>
+npm ci
+npm run build
+cd backend
+npm ci
+cd ..
+```
+
+Replace `<PR_NUMBER>` with the actual pull request number.
+
+### Building the Project Locally
+
+After checking out any branch:
+
+```bash
+npm ci
+npm run build
+cd backend
+npm ci
+cd ..
+```
+
+To run the full development environment:
+
+```bash
+npm run dev:full
+```
+
 ## License
 
 By contributing, you agree that your contributions will be licensed under the MIT License.

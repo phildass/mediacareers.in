@@ -1,28 +1,32 @@
 #!/usr/bin/env bash
 # Robustly extract a Vercel deployment URL from Vercel CLI output or JSON.
-# Usage: extract_vercel_url.sh path/to/vercel-output.txt
+# Usage:
+#   extract_vercel_url.sh [path/to/vercel-output.txt]
+#   cat vercel-output.txt | extract_vercel_url.sh
 set -euo pipefail
 
-INPUT_FILE="${1:-/dev/stdin}"
-OUT=""
+# Read from argument (file) or stdin
+INPUT="${1:-/dev/stdin}"
+CONTENT="$(cat "$INPUT")"
 
-# Try to parse JSON-like "url" fields (e.g. {"url":"https://..."}).
-if grep -qi '"url"' "$INPUT_FILE" 2>/dev/null || grep -qi '\\"url\\":' "$INPUT_FILE" 2>/dev/null; then
-  OUT=$(grep -Eo '"url"[[:space:]]*:[[:space:]]*"[^"]+"' "$INPUT_FILE" 2>/dev/null \
-    | head -n1 \
-    | sed -E 's/.*"url"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')
+# Try to extract a URL from JSON if jq is available. Look for common fields.
+URL=""
+if command -v jq >/dev/null 2>&1; then
+  # Attempt several common JSON keys that might contain the deployment URL.
+  URL="$(printf '%s' "$CONTENT" \
+    | jq -r '(.url // .productionUrl // .production_url // .deploymentUrl // .deployment_url // .preview?.url // empty)  // empty' 2>/dev/null || true)"
 fi
 
-# Fallback: find the first https://*.vercel.app (or now.sh) or other http(s) hostname.
-if [ -z "$OUT" ]; then
-  OUT=$(grep -Eo 'https?://[a-z0-9._-]+\.(vercel\.app|now\.sh|[a-z0-9.-]+)' "$INPUT_FILE" 2>/dev/null | head -n1 || true)
+# Fallback: grep for a vercel.app URL in the text
+if [ -z "${URL:-}" ]; then
+  URL="$(printf '%s' "$CONTENT" | grep -oE 'https://[a-zA-Z0-9._-]+\.vercel\.app' | head -n 1 || true)"
 fi
 
-# Final safety check: only print if it looks like an http URL
-if [[ "$OUT" =~ ^https?:// ]]; then
-  echo "$OUT"
-  exit 0
+# Final check and output
+if [ -z "${URL:-}" ]; then
+  echo "Error: Could not extract Vercel deployment URL from input" >&2
+  exit 1
 fi
 
-# Nothing found
-exit 1
+# Safe to print the URL (public, not a secret)
+printf '%s\n' "$URL"
