@@ -83,7 +83,13 @@ We welcome feature suggestions! Please:
 
 2. Install dependencies
    ```bash
+   # Install frontend dependencies
    npm install
+   
+   # Install backend dependencies
+   cd backend
+   npm install
+   cd ..
    ```
 
 3. Configure environment
@@ -100,6 +106,100 @@ We welcome feature suggestions! Please:
 5. Start development server
    ```bash
    npm run dev
+   ```
+
+### Testing a Pull Request Locally
+
+To test a specific pull request branch locally:
+
+1. Clone the main repository (if you haven't already)
+   ```bash
+   git clone https://github.com/phildass/mediacareers.in.git
+   cd mediacareers.in
+   ```
+
+2. Fetch the PR branch (replace `PR_NUMBER` with the actual PR number)
+   ```bash
+   git fetch origin pull/PR_NUMBER/head:pr-PR_NUMBER
+   git checkout pr-PR_NUMBER
+   ```
+
+   Or if you know the branch name:
+   ```bash
+   git fetch origin branch-name
+   git checkout branch-name
+   ```
+
+3. Install dependencies for both frontend and backend
+   ```bash
+   # Install frontend dependencies
+   npm ci
+   
+   # Install backend dependencies
+   cd backend
+   npm ci
+   cd ..
+   ```
+
+4. Run linting to verify code quality
+   ```bash
+   # Lint frontend
+   npm run lint
+   
+   # Lint backend
+   cd backend
+   npm run lint
+   cd ..
+   ```
+
+5. Build the project to test compilation
+   ```bash
+   # Build frontend (Next.js)
+   npm run build
+   ```
+
+6. Run tests (if available)
+   ```bash
+   # Run frontend tests
+   npm test
+   
+   # Run backend tests
+   cd backend
+   npm test
+   cd ..
+   ```
+
+7. Start the development servers to test functionality
+   ```bash
+   # Run both frontend and backend together
+   npm run dev:full
+   
+   # Or run separately:
+   # Frontend only: npm run dev (port 3000)
+   # Backend only: npm run server (port 5000)
+   ```
+
+### Verifying GitHub Actions Workflow Changes
+
+If the PR includes changes to GitHub Actions workflows:
+
+1. Check workflow syntax
+   ```bash
+   # View the workflow file
+   cat .github/workflows/vercel-deploy.yml
+   
+   # Validate YAML syntax
+   npm install -g yaml-lint
+   yaml-lint .github/workflows/*.yml
+   ```
+
+2. Test scripts locally if included
+   ```bash
+   # Make scripts executable
+   chmod +x .github/scripts/*.sh
+   
+   # Test the URL extraction script
+   echo "https://test.vercel.app" | .github/scripts/extract_vercel_url.sh
    ```
 
 ## Project Structure
