@@ -1,76 +1,28 @@
-name: Deploy to Vercel
+#!/usr/bin/env bash
+# Robustly extract a Vercel deployment URL from Vercel CLI output or JSON.
+# Usage: extract_vercel_url.sh path/to/vercel-output.txt
+set -euo pipefail
 
-on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+INPUT_FILE="${1:-/dev/stdin}"
+OUT=""
 
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+# Try to parse JSON-like "url" fields (e.g. {"url":"https://..."}).
+if grep -qi '"url"' "$INPUT_FILE" 2>/dev/null || grep -qi '\\"url\\":' "$INPUT_FILE" 2>/dev/null; then
+  OUT=$(grep -Eo '"url"[[:space:]]*:[[:space:]]*"[^"]+"' "$INPUT_FILE" 2>/dev/null \
+    | head -n1 \
+    | sed -E 's/.*"url"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')
+fi
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20.x'
+# Fallback: find the first https://*.vercel.app (or now.sh) or other http(s) hostname.
+if [ -z "$OUT" ]; then
+  OUT=$(grep -Eo 'https?://[a-z0-9._-]+\.(vercel\.app|now\.sh|[a-z0-9.-]+)' "$INPUT_FILE" 2>/dev/null | head -n1 || true)
+fi
 
-      - name: Verify Vercel token present
-        run: |
-          if [ -z "${VERCEL_TOKEN}" ]; then
-            echo "ERROR: VERCEL_TOKEN secret is not set. Add it under Settings → Secrets and variables → Actions."
-            exit 1
-          fi
-          echo "VERCEL_TOKEN is set (masked)."
-      
-      - name: Show Vercel CLI version
-        run: npx vercel --version || true
+# Final safety check: only print if it looks like an http URL
+if [[ "$OUT" =~ ^https?:// ]]; then
+  echo "$OUT"
+  exit 0
+fi
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build
-        run: npm run build
-
-      - name: Deploy to Vercel
-        id: deploy
-        run: |
-          echo "Deploying to Vercel..."
-          npx vercel --prod --confirm --token "$VERCEL_TOKEN" 2>&1 | tee deploy.log
-
-      - name: Extract Production URL
-        id: extract_url
-        run: |
-          chmod +x .github/scripts/extract_vercel_url.sh
-          PRODUCTION_URL=$(.github/scripts/extract_vercel_url.sh deploy.log)
-          echo "production_url=$PRODUCTION_URL" >> $GITHUB_OUTPUT
-          echo "Production URL: $PRODUCTION_URL"
-          
-          # Save to docs/production_url.txt
-          echo "$PRODUCTION_URL" > docs/production_url.txt
-          echo "Updated docs/production_url.txt with: $PRODUCTION_URL"
-
-      - name: Commit Production URL
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add docs/production_url.txt
-          git diff --staged --quiet || git commit -m "chore: update production URL [skip ci]"
-          git push || echo "No changes to push"
-
-      - name: Display Deployment Summary
-        run: |
-          echo "✅ Deployment successful!"
-          echo "🌐 Production URL: ${{ steps.extract_url.outputs.production_url }}"
-          echo "📄 URL saved to: docs/production_url.txt"
+# Nothing found
+exit 1
