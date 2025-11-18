@@ -1,43 +1,164 @@
-name: Deploy to Vercel
+name: Vercel Deploy
+
+# Workflow: Build and deploy to Vercel on push to main and merged PRs to main.
+# - Builds client & backend (if present)
+# - Deploys using Vercel CLI (VERCEL_TOKEN, VERCEL_PROJECT_ID, VERCEL_ORG_ID required)
+# - Extracts deployment URL and saves as workflow output
+# - Commits docs/production_url.txt with the production URL using GITHUB_TOKEN
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch:
+  pull_request:
+    types: [closed]
 
 jobs:
-  build-and-deploy:
+  prepare:
+    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true || github.event_name == 'push'
     runs-on: ubuntu-latest
-    env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    outputs:
+      deploy-url: ${{ steps.set-url.outputs.deploy_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
 
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20.x'
+          node-version: '18'
+          cache: 'npm'
 
-      - name: Verify Vercel token present
+      - name: Install & Build (root, client, backend if present)
+        id: build
         run: |
-          if [ -z "${VERCEL_TOKEN}" ]; then
-            echo "ERROR: VERCEL_TOKEN secret is not set. Add it under Settings → Secrets and variables → Actions."
+          set -euo pipefail
+          echo "Detecting and building packages..."
+          # Root
+          if [ -f package.json ]; then
+            echo "Found root package.json — installing and building (if build script exists)."
+            npm ci
+            if npm run | grep -q " build"; then
+              npm run build || true
+            fi
+          else
+            echo "No root package.json"
+          fi
+          # Client
+          if [ -d client ] && [ -f client/package.json ]; then
+            echo "Found client/package.json — installing and building."
+            cd client
+            npm ci
+            if npm run | grep -q " build"; then
+              npm run build || true
+            fi
+            cd -
+          else
+            echo "No client package.json"
+          fi
+          # Backend
+          if [ -d backend ] && [ -f backend/package.json ]; then
+            echo "Found backend/package.json — installing and building."
+            cd backend
+            npm ci
+            if npm run | grep -q " build"; then
+              npm run build || true
+            fi
+            cd -
+          else
+            echo "No backend package.json"
+          fi
+
+      - name: Install Vercel CLI
+        run: |
+          set -euo pipefail
+          npm install -g vercel@latest
+
+      - name: Deploy to Vercel (prod)
+        id: vercel_deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        run: |
+          set -euo pipefail
+          # Choose deploy dir if client exists, otherwise repo root
+          if [ -d client ] && [ -f client/package.json ]; then
+            DEPLOY_DIR=client
+          else
+            DEPLOY_DIR=.
+          fi
+          echo "Deploying directory: $DEPLOY_DIR"
+          # Run vercel CLI to deploy to production; capture entire output
+          # --yes/--confirm suppress interactive prompts; --token uses secret
+          # Attempt to produce JSON output if CLI supports it and pipe to file
+          cd "$DEPLOY_DIR"
+          # Try JSON output first; if not supported, fall back to raw stdout
+          set +e
+          vercel --prod --token "$VERCEL_TOKEN" --confirm --scope "$VERCEL_ORG_ID" --project "$VERCEL_PROJECT_ID" --output=export > "$GITHUB_WORKSPACE/vercel-deploy-output.txt" 2>&1
+          RET=$?
+          set -e
+          cd -
+          if [ $RET -ne 0 ]; then
+            echo "Vercel CLI exit code: $RET. See logs above."
+            cat "$GITHUB_WORKSPACE/vercel-deploy-output.txt" || true
+            exit $RET
+          fi
+          echo "Saved vercel output to $GITHUB_WORKSPACE/vercel-deploy-output.txt"
+          # Extract URL using helper script (robust parsing)
+          bash .github/scripts/extract_vercel_url.sh "$GITHUB_WORKSPACE/vercel-deploy-output.txt" > "$GITHUB_WORKSPACE/deploy_url.txt" || true
+          DEPLOY_URL=$(cat "$GITHUB_WORKSPACE/deploy_url.txt" || echo "")
+          if [ -z "$DEPLOY_URL" ]; then
+            echo "ERROR: could not determine deployment URL."
+            echo "==== vercel-deploy-output.txt ===="
+            sed -n '1,200p' "$GITHUB_WORKSPACE/vercel-deploy-output.txt" || true
             exit 1
           fi
-          echo "VERCEL_TOKEN is set (masked)."
-      
-      - name: Show Vercel CLI version
-        run: npx vercel --version || true
+          echo "deployment-url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Set URL output (for job-level outputs)
+        id: set-url
+        run: |
+          echo "deploy_url=${{ steps.vercel_deploy.outputs.deployment-url || '' }}" > temp || true
+          # If previous step set GITHUB_OUTPUT, prefer that
+          if [ -f "$GITHUB_WORKSPACE/deploy_url.txt" ]; then
+            cat "$GITHUB_WORKSPACE/deploy_url.txt" | sed 's/^/deploy_url=/' > temp
+          fi
+          # write to step output
+          DEPLOY_URL_LINE=$(cat temp || echo "deploy_url=")
+          DEPLOY_URL_VALUE=${DEPLOY_URL_LINE#deploy_url=}
+          echo "::set-output name=deploy_url::$DEPLOY_URL_VALUE" || true
+          echo "deploy_url=$DEPLOY_URL_VALUE" >> "$GITHUB_OUTPUT"
 
-      - name: Build
-        run: npm run build
+  persist-url:
+    needs: prepare
+    runs-on: ubuntu-latest
+    if: needs.prepare.outputs.deploy-url != ''
+    steps:
+      - name: Checkout (persist credentials to allow pushing)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
 
-      - name: Deploy to Vercel
-        run: npx vercel --prod --confirm --token "$VERCEL_TOKEN"
+      - name: Configure git for commit by workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Write production URL to docs/production_url.txt
+        run: |
+          set -euo pipefail
+          mkdir -p docs
+          echo "${{ needs.prepare.outputs.deploy-url }}" > docs/production_url.txt
+          git add docs/production_url.txt
+          # Commit only if changes
+          if git diff --cached --quiet; then
+            echo "No changes to docs/production_url.txt"
+          else
+            git commit -m "ci: update production URL from Vercel deployment (${GITHUB_SHA})"
+            git push origin HEAD:main
+          fi

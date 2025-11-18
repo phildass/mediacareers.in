@@ -2,6 +2,31 @@
 
 Thank you for your interest in contributing to MediaCareers.in! This document provides guidelines and instructions for contributing to this project.
 
+## Quick start: clone, fetch PR branch and build locally
+
+Copy and paste these lines one at a time into your terminal.
+
+```bash
+git clone git@github.com:phildass/mediacareers.in.git
+cd mediacareers.in
+
+# Install dependencies and build at repo root (if project uses npm)
+npm ci
+npm run build --if-present
+
+# If there's a client/ folder, build it too
+cd client || true
+npm ci || true
+npm run build --if-present || true
+cd -
+
+# If there's a backend/ folder, build it too
+cd backend || true
+npm ci || true
+npm run build --if-present || true
+cd -
+```
+
 ## Code of Conduct
 
 By participating in this project, you agree to maintain a respectful and inclusive environment for all contributors.
