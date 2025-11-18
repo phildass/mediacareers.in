@@ -1,0 +1,189 @@
+name: Auto-resolve PR conflicts (safe files)
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to process (optional when dispatching)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-resolve:
+    name: Try auto-merge main into PR and resolve safe conflicts
+    runs-on: ubuntu-latest
+    env:
+      # Comma-separated list of glob patterns to auto-resolve in favor of main.
+      # Patterns are matched as simple checks in the script (docs/* or *.md, etc).
+      AUTO_RESOLVE_PATTERNS: "docs/,*.md,docs/production_url.txt,.github/scripts/extract_vercel_url.sh"
+      DEFAULT_BRANCH: main
+
+    steps:
+      - name: Checkout repository (fetch all history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Determine PR number and branch
+        id: prinfo
+        run: |
+          echo "GITHUB_EVENT_NAME=$GITHUB_EVENT_NAME"
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            PR_NUMBER="${{ github.event.number }}"
+            BRANCH="${{ github.head_ref }}"
+          else
+            # workflow_dispatch path: accept pr_number input
+            PR_NUMBER="${{ github.event.inputs.pr_number || '' }}"
+            if [ -z "$PR_NUMBER" ]; then
+              echo "No PR number provided for workflow_dispatch" >&2
+              exit 1
+            fi
+            BRANCH="pr-${PR_NUMBER}"
+            # fetch the PR head to a local branch name
+            git fetch origin "refs/pull/${PR_NUMBER}/head:${BRANCH}"
+          fi
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Configure git author for bot commits
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Checkout PR branch
+        run: |
+          git checkout "$BRANCH"
+
+      - name: Fetch target branch (main)
+        run: |
+          git fetch origin "$DEFAULT_BRANCH"
+
+      - name: Attempt merge (no commit) and auto-resolve safe conflicts
+        id: merge
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+
+          # Attempt merge without committing
+          MERGE_BASE_REF="origin/${DEFAULT_BRANCH}"
+          echo "Merging ${MERGE_BASE_REF} into $(git rev-parse --abbrev-ref HEAD)"
+          git merge --no-commit --no-ff "${MERGE_BASE_REF}" || true
+
+          # If there are no conflicts, finish
+          if ! git ls-files -u >/dev/null 2>&1 || [ -z "$(git ls-files -u)" ]; then
+            echo "no_conflicts=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Prepare patterns
+          IFS=',' read -r -a PATTERNS <<< "$AUTO_RESOLVE_PATTERNS"
+
+          # List conflicted files
+          CONFLICTS="$(git diff --name-only --diff-filter=U || true)"
+          echo "Conflicted files:"
+          echo "$CONFLICTS"
+
+          # For each conflict, check whether it matches a safe pattern.
+          RESOLVED_FILES=""
+          REMAINING=""
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            match=false
+            for pat in "${PATTERNS[@]}"; do
+              # simple pattern matching:
+              case "$pat" in
+                */) # directory prefix, e.g., docs/
+                  if [[ "$file" == ${pat}* ]]; then match=true; fi
+                  ;;
+                *.md) # wildcard suffix
+                  if [[ "$file" == *.md ]]; then match=true; fi
+                  ;;
+                *) # exact match
+                  if [[ "$file" == "$pat" ]]; then match=true; fi
+                  ;;
+              esac
+              if [ "$match" = true ]; then
+                break
+              fi
+            done
+
+            if [ "$match" = true ]; then
+              # In a merge where we merged main INTO the PR branch, "theirs" refers to the incoming branch (main).
+              # We want to prefer main for safe files, so checkout --theirs.
+              git checkout --theirs -- "$file" || true
+              git add -- "$file"
+              RESOLVED_FILES="${RESOLVED_FILES}${file}\n"
+              echo "Auto-resolved $file using main (theirs)"
+            else
+              REMAINING="${REMAINING}${file}\n"
+              echo "Left unresolved: $file"
+            fi
+          done <<EOF
+$CONFLICTS
+EOF
+
+          # Check for unresolved conflicts
+          if git ls-files -u >/dev/null 2>&1 && [ -n "$(git ls-files -u)" ]; then
+            echo "unresolved_conflicts=true" >> "$GITHUB_OUTPUT"
+            echo "remaining_conflicts<<EOF" >> "$GITHUB_OUTPUT"
+            printf "%b" "$REMAINING" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+            # Abort the merge to avoid leaving repo in merging state
+            git merge --abort || true
+            exit 0
+          fi
+
+          # Commit and push the merge
+          git commit -m "chore: merge ${DEFAULT_BRANCH} into ${BRANCH} (auto-resolved safe files)" || true
+          git push origin HEAD:"${BRANCH}"
+
+          echo "no_conflicts=false" >> "$GITHUB_OUTPUT"
+          echo "auto_resolved<<EOF" >> "$GITHUB_OUTPUT"
+          printf "%b" "$RESOLVED_FILES" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Comment on PR with result
+        if: always()
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = parseInt(process.env.PR_NUMBER || '${{ steps.prinfo.outputs.pr_number }}' )
+            if (!pr) {
+              core.setFailed('No PR number available to comment on')
+            } else {
+              const noConflicts = "${{ steps.merge.outputs.no_conflicts }}" === "true"
+              const unresolved = "${{ steps.merge.outputs.unresolved_conflicts }}" === "true"
+              const autoResolved = `${{ steps.merge.outputs.auto_resolved }}`.trim()
+              const remaining = `${{ steps.merge.outputs.remaining_conflicts }}`.trim()
+
+              let body = ''
+              if (noConflicts === true && autoResolved === '') {
+                body = "No merge conflicts detected when merging main into this branch."
+              } else if (noConflicts === false) {
+                body = "**Auto-merge succeeded.** The job merged main into the branch and auto-resolved the following safe files:\n\n"
+                body += autoResolved ? "```\n" + autoResolved + "\n```\n" : "_(none)_\n"
+              } else if (unresolved === true) {
+                body = "**Auto-merge partially succeeded.** Some conflicts remain and need a human to resolve the following files:\n\n"
+                body += remaining ? "```\n" + remaining + "\n```\n" : "_(unknown)_\n"
+                body += "\nI left the branch unchanged so you can resolve these manually. The bot only auto-resolves files that match configured safe patterns (docs/**, *.md, docs/production_url.txt, .github/scripts/extract_vercel_url.sh)."
+              } else {
+                body = "Auto-merge: No action taken."
+              }
+
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr,
+                body,
+              })
+            }
+        env:
+          PR_NUMBER: ${{ steps.prinfo.outputs.pr_number }}
