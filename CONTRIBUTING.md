@@ -6,6 +6,15 @@ Thank you for your interest in contributing to MediaCareers.in! This document pr
 
 By participating in this project, you agree to maintain a respectful and inclusive environment for all contributors.
 
+## Quick start: clone, fetch PR branch and build locally
+
+Copy and paste these lines one at a time into your terminal.
+
+```bash
+git clone git@github.com:phildass/mediacareers.in.git
+cd mediacareers.in
+```
+
 ## How to Contribute
 
 ### Reporting Bugs
