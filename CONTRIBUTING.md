@@ -68,6 +68,29 @@ We welcome feature suggestions! Please:
 
 ## Development Setup
 
+## Quick start: clone, fetch PR branch and build locally
+
+Copy and paste these lines one at a time into your terminal.
+
+git clone git@github.com:phildass/mediacareers.in.git
+cd mediacareers.in
+
+# Install dependencies and build at repo root (if project uses npm)
+npm ci
+npm run build --if-present
+
+# If there's a client/ folder, build it too
+cd client || true
+npm ci || true
+npm run build --if-present || true
+cd -
+
+# If there's a backend/ folder, build it too
+cd backend || true
+npm ci || true
+npm run build --if-present || true
+cd -
+
 ### Prerequisites
 - Node.js v18 or higher
 - MongoDB (local or Atlas)
