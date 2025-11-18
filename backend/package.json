@@ -21,7 +21,7 @@
     "joi": "^17.11.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.19.4",
-    "nodemailer": "^6.9.7"
+    "nodemailer": "^7.0.10"
   },
   "devDependencies": {
     "eslint": "^9.39.1",
