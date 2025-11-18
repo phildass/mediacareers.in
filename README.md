@@ -2,6 +2,14 @@
 
 A comprehensive job board platform for media professionals in India, built with Next.js and Express.
 
+<img src="https://github.com/phildass/mediacareers.in/actions/workflows/vercel-deploy.yml/badge.svg">
+
+## Production URL
+
+The current production URL is stored in docs/production_url.txt.
+
+Raw file: https://raw.githubusercontent.com/phildass/mediacareers.in/main/docs/production_url.txt
+
 ## 🚀 Features
 
 - **Job Board**: Browse and search media jobs across various categories
