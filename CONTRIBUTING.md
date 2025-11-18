@@ -68,6 +68,20 @@ We welcome feature suggestions! Please:
 
 ## Development Setup
 
+### Quick Start
+
+Clone and run the project locally in a few commands:
+
+```bash
+git clone https://github.com/phildass/mediacareers.in.git
+cd mediacareers.in
+npm install
+cp .env.example .env
+npm run dev
+```
+
+Visit http://localhost:3000 to see the application.
+
 ### Prerequisites
 - Node.js v18 or higher
 - MongoDB (local or Atlas)
