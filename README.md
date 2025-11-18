@@ -1,6 +1,14 @@
 # MediaCareers.in
 
+[![Deploy to Vercel](https://github.com/phildass/mediacareers.in/actions/workflows/vercel-deploy.yml/badge.svg)](https://github.com/phildass/mediacareers.in/actions/workflows/vercel-deploy.yml)
+
 A comprehensive job board platform for media professionals in India, built with Next.js and Express.
+
+## 🌐 Production Deployment
+
+The latest production deployment is available at: [View Production URL](docs/production_url.txt)
+
+Current production URL is automatically updated by CI/CD pipeline on every successful deployment to the `main` branch.
 
 ## 🚀 Features
 

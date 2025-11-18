@@ -4,11 +4,19 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    types: [closed]
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
   build-and-deploy:
+    # Only run on push to main or merged PRs to main
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
     runs-on: ubuntu-latest
+    outputs:
+      deployment-url: ${{ steps.extract-url.outputs.url }}
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -21,6 +29,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20.x'
+          cache: 'npm'
 
       - name: Verify Vercel token present
         run: |
@@ -28,16 +37,116 @@ jobs:
             echo "ERROR: VERCEL_TOKEN secret is not set. Add it under Settings → Secrets and variables → Actions."
             exit 1
           fi
-          echo "VERCEL_TOKEN is set (masked)."
-      
-      - name: Show Vercel CLI version
-        run: npx vercel --version || true
+          echo "✓ VERCEL_TOKEN is set (masked)."
+          echo "✓ Secrets configured for deployment"
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install frontend dependencies
+        run: |
+          echo "Installing frontend dependencies..."
+          npm ci
+          echo "✓ Frontend dependencies installed"
 
-      - name: Build
-        run: npm run build
+      - name: Install backend dependencies
+        run: |
+          echo "Installing backend dependencies..."
+          cd backend
+          npm ci
+          cd ..
+          echo "✓ Backend dependencies installed"
+
+      - name: Lint frontend
+        run: |
+          echo "Running frontend linter..."
+          npm run lint
+          echo "✓ Frontend linting passed"
+        continue-on-error: false
+
+      - name: Lint backend
+        run: |
+          echo "Running backend linter..."
+          cd backend
+          npm run lint
+          cd ..
+          echo "✓ Backend linting passed"
+        continue-on-error: false
+
+      - name: Build frontend
+        run: |
+          echo "Building Next.js frontend..."
+          npm run build
+          echo "✓ Frontend build completed"
+        env:
+          NEXT_PUBLIC_API_BASE_URL: ${{ secrets.NEXT_PUBLIC_API_BASE_URL || 'https://api.mediacareers.in' }}
 
       - name: Deploy to Vercel
-        run: npx vercel --prod --confirm --token "$VERCEL_TOKEN"
+        id: deploy
+        run: |
+          echo "Deploying to Vercel production..."
+          npx vercel --prod --confirm --token "$VERCEL_TOKEN" 2>&1 | tee vercel-output.log
+          echo "✓ Deployment initiated"
+        continue-on-error: false
+
+      - name: Extract deployment URL
+        id: extract-url
+        run: |
+          echo "Extracting deployment URL..."
+          chmod +x .github/scripts/extract_vercel_url.sh
+          DEPLOYMENT_URL=$(.github/scripts/extract_vercel_url.sh vercel-output.log || echo "")
+          
+          if [ -z "$DEPLOYMENT_URL" ]; then
+            echo "WARNING: Could not extract deployment URL from Vercel output"
+            echo "Checking for alternative URL formats..."
+            # Fallback: try to get URL from vercel CLI inspect
+            DEPLOYMENT_URL=$(npx vercel --token "$VERCEL_TOKEN" ls --prod 2>/dev/null | grep -oP 'https://[a-zA-Z0-9\-\.]+\.vercel\.app' | head -n1 || echo "https://mediacareers.vercel.app")
+          fi
+          
+          echo "url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          echo "✓ Deployment URL: $DEPLOYMENT_URL"
+          echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> $GITHUB_ENV
+
+      - name: Upload deployment logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vercel-deployment-logs
+          path: vercel-output.log
+          retention-days: 30
+
+  update-production-url:
+    needs: build-and-deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create docs directory if needed
+        run: mkdir -p docs
+
+      - name: Update production URL file
+        run: |
+          DEPLOYMENT_URL="${{ needs.build-and-deploy.outputs.deployment-url }}"
+          echo "Updating production URL to: $DEPLOYMENT_URL"
+          echo "$DEPLOYMENT_URL" > docs/production_url.txt
+          echo "Last updated: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> docs/production_url.txt
+          echo "Deployment from commit: ${{ github.sha }}" >> docs/production_url.txt
+          cat docs/production_url.txt
+          echo "✓ Production URL file updated"
+
+      - name: Commit production URL
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add docs/production_url.txt
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update production URL to ${{ needs.build-and-deploy.outputs.deployment-url }}"
+            git push
+            echo "✓ Production URL committed to repository"
+          fi
