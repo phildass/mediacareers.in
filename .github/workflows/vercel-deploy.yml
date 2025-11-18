@@ -9,6 +9,8 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -16,6 +18,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -40,4 +44,33 @@ jobs:
         run: npm run build
 
       - name: Deploy to Vercel
-        run: npx vercel --prod --confirm --token "$VERCEL_TOKEN"
+        id: deploy
+        run: |
+          echo "Deploying to Vercel..."
+          npx vercel --prod --confirm --token "$VERCEL_TOKEN" 2>&1 | tee deploy.log
+
+      - name: Extract Production URL
+        id: extract_url
+        run: |
+          chmod +x .github/scripts/extract_vercel_url.sh
+          PRODUCTION_URL=$(.github/scripts/extract_vercel_url.sh deploy.log)
+          echo "production_url=$PRODUCTION_URL" >> $GITHUB_OUTPUT
+          echo "Production URL: $PRODUCTION_URL"
+          
+          # Save to docs/production_url.txt
+          echo "$PRODUCTION_URL" > docs/production_url.txt
+          echo "Updated docs/production_url.txt with: $PRODUCTION_URL"
+
+      - name: Commit Production URL
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add docs/production_url.txt
+          git diff --staged --quiet || git commit -m "chore: update production URL [skip ci]"
+          git push || echo "No changes to push"
+
+      - name: Display Deployment Summary
+        run: |
+          echo "✅ Deployment successful!"
+          echo "🌐 Production URL: ${{ steps.extract_url.outputs.production_url }}"
+          echo "📄 URL saved to: docs/production_url.txt"
