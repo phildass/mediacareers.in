@@ -1,43 +1,126 @@
-name: Deploy to Vercel
+name: Vercel Production Deployment
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
 
 jobs:
   build-and-deploy:
+    # Only run on push to main OR merged pull requests
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
     runs-on: ubuntu-latest
-    env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    permissions:
+      contents: write
+    outputs:
+      deployment_url: ${{ steps.extract_url.outputs.url }}
+    
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20.x'
+          cache: 'npm'
 
-      - name: Verify Vercel token present
+      - name: Verify required secrets
         run: |
-          if [ -z "${VERCEL_TOKEN}" ]; then
-            echo "ERROR: VERCEL_TOKEN secret is not set. Add it under Settings → Secrets and variables → Actions."
+          if [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
+            echo "::error::VERCEL_TOKEN secret is not set"
             exit 1
           fi
-          echo "VERCEL_TOKEN is set (masked)."
-      
-      - name: Show Vercel CLI version
-        run: npx vercel --version || true
+          if [ -z "${{ secrets.VERCEL_ORG_ID }}" ]; then
+            echo "::warning::VERCEL_ORG_ID secret is not set (optional)"
+          fi
+          if [ -z "${{ secrets.VERCEL_PROJECT_ID }}" ]; then
+            echo "::warning::VERCEL_PROJECT_ID secret is not set (optional)"
+          fi
+          echo "Required secrets verified (values are masked)"
 
-      - name: Install dependencies
+      - name: Install frontend dependencies
         run: npm ci
 
-      - name: Build
+      - name: Build frontend
         run: npm run build
+        env:
+          NEXT_PUBLIC_API_BASE_URL: ${{ secrets.NEXT_PUBLIC_API_BASE_URL || 'https://api.mediacareers.in' }}
+
+      - name: Install backend dependencies
+        if: hashFiles('backend/package.json') != ''
+        working-directory: backend
+        run: npm ci
 
       - name: Deploy to Vercel
-        run: npx vercel --prod --confirm --token "$VERCEL_TOKEN"
+        id: vercel_deploy
+        run: |
+          set -e
+          echo "Deploying to Vercel..."
+          
+          # Deploy and capture output
+          DEPLOY_OUTPUT=$(npx vercel --prod --confirm --token "${{ secrets.VERCEL_TOKEN }}" 2>&1 | tee /tmp/vercel_output.log)
+          
+          # Show output (URLs are public, not secrets)
+          echo "$DEPLOY_OUTPUT"
+          
+          echo "Deployment completed successfully"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Extract deployment URL
+        id: extract_url
+        run: |
+          set -e
+          
+          # Make script executable
+          chmod +x .github/scripts/extract_vercel_url.sh
+          
+          # Extract URL from Vercel output
+          DEPLOYMENT_URL=$(.github/scripts/extract_vercel_url.sh /tmp/vercel_output.log)
+          
+          echo "Extracted deployment URL: $DEPLOYMENT_URL"
+          echo "url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+
+      - name: Update production URL file
+        run: |
+          set -e
+          
+          DEPLOYMENT_URL="${{ steps.extract_url.outputs.url }}"
+          
+          # Write URL to file
+          echo "$DEPLOYMENT_URL" > docs/production_url.txt
+          
+          echo "Updated docs/production_url.txt with: $DEPLOYMENT_URL"
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit production URL
+        run: |
+          set -e
+          
+          # Add the file
+          git add docs/production_url.txt
+          
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update production deployment URL to ${{ steps.extract_url.outputs.url }}"
+            git push
+            echo "Committed and pushed production URL update"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
